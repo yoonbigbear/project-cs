@@ -8,7 +8,6 @@
 - [ ] udp
 - [ ] rpc
 - [ ] auto gen
-- [ ] core
 - [ ] dead reckon
 - [ ] postgres
 - [ ] EF core
