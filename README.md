@@ -15,7 +15,7 @@
 - [ ] ECS
 - [ ] p2p
 - [ ] http3
-- [ ] webgl
+- [ ] web build
 - [ ] vpn
 - [ ] streamSDK
 - [ ] profile
