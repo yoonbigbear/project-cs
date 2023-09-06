@@ -18,3 +18,6 @@
 - [ ] webgl
 - [ ] vpn
 - [ ] streamSDK
+- [ ] profile
+- [ ] stress test
+- [ ] unit test
