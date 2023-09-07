@@ -13,6 +13,10 @@ internal class Program
 
 		server.Start();
 
+		while(true)
+		{
+			Thread.Yield();
+		}
 		server.Stop();
 	}
 }

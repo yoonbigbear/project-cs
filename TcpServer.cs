@@ -101,7 +101,7 @@ namespace Net
 			//context가 재사용되고 있어서 소켓을 우선 비워야 한다.
 			args.AcceptSocket = null;
 
-			if (_acceptorSocket.AcceptAsync(args))
+			if (!_acceptorSocket.AcceptAsync(args))
 				ProcessAccept(args);
 		}
 
@@ -109,9 +109,9 @@ namespace Net
 		{
 			if (args.SocketError == SocketError.Success)
 			{
-				var session = CreateSession();
+				Debug.WriteLine("new session connected");
 
-				//Register Session 호출
+				var session = CreateSession();
 
 				//들어온 소켓을 세션의 소켓으로 넘긴다.
 				session.Connect(args.AcceptSocket);
@@ -146,6 +146,23 @@ namespace Net
 
 			GC.SuppressFinalize(this);
 			throw new NotImplementedException();
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!IsDisposed)
+			{
+				if (disposing)
+				{
+					Stop();
+				}
+			}
+
+			// Dispose Unmanaged Resource
+
+			// large fields to null
+
+			IsDisposed = true;
 		}
 
 		protected virtual void OnStart() { }

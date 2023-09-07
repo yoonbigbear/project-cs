@@ -16,21 +16,48 @@ namespace Net
 
 		// Send
 		protected PipeWriter writer { get; set; }
-		Memory<byte> _sendBuffer = new Memory<byte>();
 		SocketAsyncEventArgs _sendEventArg;
 
 		public bool IsSocketDisposed { get; private set; }
 		public bool IsConnected { get; private set; }
+		public int BytesReceived { get; private set; }
+		public bool IsDIsposed { get; private set; }
 
 		public void Dispose()
 		{
-			reader.Complete();
-			throw new NotImplementedException();
+			// finalize는 사실상 언제 호출될지 모르므로 대신하는 역할
+			Dispose(true);
+			
+			// finallize 호출되지 않도록 설정
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!IsDIsposed)
+			{
+				if (disposing)
+				{
+					//dispose managed resources
+					Disconnect();
+				}
+
+				// dispose unmanaged resources
+
+				// large field to null
+
+				IsDIsposed = true;
+			}
 		}
 
 		public void Connect(Socket socket)
 		{
 			_socket = socket;
+
+			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.ReuseAddress, true);
+			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.Linger, false);
+			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.KeepAlive, true);
 
 			IsSocketDisposed = false;
 
@@ -39,7 +66,7 @@ namespace Net
 
 			//Reader Writer 셋
 			PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
-			PipeWriter.Create(stream);
+			PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 			// Send/Recv event 콜백 등록
 			_recvEventArg = new();
@@ -55,7 +82,6 @@ namespace Net
 
 			//Start Receive
 
-
 			// 가끔 disconnect로 받을수도잇음
 			if (IsSocketDisposed)
 				return;
@@ -67,6 +93,7 @@ namespace Net
 		{
 			if (!IsConnected)
 				return false;
+
 
 			_recvEventArg.Completed -= OnAsyncComplete;
 			_sendEventArg.Completed -= OnAsyncComplete;
@@ -92,6 +119,9 @@ namespace Net
 			catch (ObjectDisposedException) { }
 
 			IsConnected = false;
+
+			reader.CompleteAsync();
+			writer.CompleteAsync();
 
 			OnDisconnected();
 
@@ -140,6 +170,97 @@ namespace Net
 			}
 
 			return received;
+		}
+
+		public virtual bool SendAsync(ReadOnlySpan<byte> buffer)
+		{
+			if (!IsConnected)
+				return false;
+
+			if (buffer.IsEmpty)
+				return true;
+
+			writer.WriteAsync(buffer.ToArray());
+
+			return true;
+		}
+
+		public virtual async void ReceiveAsync()
+		{
+			try
+			{
+				ReadResult result = await reader.ReadAsync();
+				var buffer = result.Buffer;
+
+				// read 종료.
+				if (buffer.IsEmpty)
+				{
+					Disconnect();
+					return;
+				}
+
+				var remainData = buffer.Length;
+				if (remainData == 0)
+				{
+					Disconnect();
+					return;
+				}
+
+				reader.AdvanceTo(buffer.Start, buffer.End);
+			}
+			catch (Exception ex)
+			{
+
+			}
+		}
+
+		bool ProcessReceive(SocketAsyncEventArgs e)
+		{
+			if (!IsConnected) return false;
+
+			var size = e.BytesTransferred;
+
+			if (size > 0)
+			{
+				BytesReceived += size;
+
+				//receive handler
+			}
+
+			if (e.SocketError == SocketError.Success)
+			{
+				if (size > 0)
+					return true;
+				else
+					Disconnect();
+			}
+			else
+			{
+				//Error
+				Disconnect();
+			}
+			return false;
+		}
+
+		bool PorcessSend(SocketAsyncEventArgs e)
+		{
+			if (!IsConnected)
+				return false;
+
+			var size = e.BytesTransferred;
+			if (size > 0)
+			{ 
+				//OnSent
+			}
+
+			if (e.SocketError == SocketError.Success)
+				return true;
+			else
+			{
+				//error
+				Disconnect();
+				return false;
+			}
 		}
 
 		protected void OnConnect() { }
