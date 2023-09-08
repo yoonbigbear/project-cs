@@ -1,4 +1,5 @@
 ﻿using Net;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -23,7 +24,7 @@ public class TcpClient : IDisposable
 
 	protected virtual Socket CreateSocket() { return new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); }
 
-	TcpClient(EndPoint endPoint, string address, int port)
+	public TcpClient(EndPoint endPoint, string address, int port)
 	{
 		EndPoint = endPoint;
 		Address = address;
@@ -46,12 +47,6 @@ public class TcpClient : IDisposable
 		_sendEventArg.Completed += OnAsyncComplete;
 		_socket = CreateSocket();
 
-		//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
-		var stream = new NetworkStream(_socket);
-
-		//Reader Writer 셋
-		_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
-		_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 		IsSocketDisposed = false;
 
@@ -80,10 +75,6 @@ public class TcpClient : IDisposable
 		}
 
 		IsConnected = true;
-		_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.ReuseAddress, true);
-		_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
-		_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.Linger, false);
-		_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.KeepAlive, true);
 
 		return true;
 	}
@@ -159,13 +150,6 @@ public class TcpClient : IDisposable
 		_sendEventArg.Completed += OnAsyncComplete;
 
 		_socket = CreateSocket();
-
-		//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
-		var stream = new NetworkStream(_socket);
-
-		//Reader Writer 셋
-		_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
-		_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 		IsSocketDisposed = false;
 
@@ -273,16 +257,51 @@ public class TcpClient : IDisposable
 		}
 	}
 
+	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)
+	{
+		if (IsSocketDisposed)
+			return;
+
+		switch (e.LastOperation)
+		{
+			case SocketAsyncOperation.Connect:
+				ProcessConnect(e);
+				break;
+			case SocketAsyncOperation.Receive:
+				if (ProcessReceive(e))
+				{
+
+				}
+				break;
+			case SocketAsyncOperation.Send:
+				if (ProcessSend(e))
+				{
+
+				}
+				break;
+			default:
+				throw new ArgumentException("");
+		}
+	}
+
 	void ProcessConnect(SocketAsyncEventArgs e)
 	{
 		IsConnected	= true;
 
 		if (e.SocketError == SocketError.Success)
 		{
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.ReuseAddress, true);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.Linger, false);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.KeepAlive, true);
+			Debug.WriteLine("Server 연결 성공");
+
+			//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
+			var stream = new NetworkStream(_socket);
+			//Reader Writer 셋
+			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
+			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
+
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
 			IsConnected = true;
 
@@ -298,23 +317,8 @@ public class TcpClient : IDisposable
 		}
 	}
 
-	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)
+	async void TryReceive()
 	{
-		if (IsSocketDisposed)
-			return;
-
-		switch (e.LastOperation)
-		{
-			case SocketAsyncOperation.Connect:
-
-				break;
-			case SocketAsyncOperation.Receive:
-				break;
-			case SocketAsyncOperation.Send:
-				break;
-			default:
-				throw new ArgumentException("");
-		}
 	}
 
 	bool ProcessReceive(SocketAsyncEventArgs e)
@@ -343,6 +347,11 @@ public class TcpClient : IDisposable
 		}
 
 		return false;
+	}
+
+	async void TrySend()
+	{
+
 	}
 
 	bool ProcessSend(SocketAsyncEventArgs e)

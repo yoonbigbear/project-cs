@@ -54,10 +54,10 @@ namespace Net
 		{
 			_socket = socket;
 
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.ReuseAddress, true);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.Linger, false);
-			_socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.KeepAlive, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
 			IsSocketDisposed = false;
 
@@ -130,7 +130,26 @@ namespace Net
 
 		void OnAsyncComplete(object sender, SocketAsyncEventArgs args)
 		{
+			if (IsSocketDisposed)
+				return;
 
+			switch(args.LastOperation)
+			{
+				case SocketAsyncOperation.Receive:
+					if (ProcessReceive(args))
+					{
+
+					}
+					break;
+				case SocketAsyncOperation.Send:
+					if (ProcessSend(args))
+					{
+
+					}
+					break;
+				default:
+					throw new ArgumentException("");
+			}
 		}
 
 		public virtual Int64 Send(ReadOnlySpan<byte> buffer)
@@ -242,7 +261,7 @@ namespace Net
 			return false;
 		}
 
-		bool PorcessSend(SocketAsyncEventArgs e)
+		bool ProcessSend(SocketAsyncEventArgs e)
 		{
 			if (!IsConnected)
 				return false;
