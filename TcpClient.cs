@@ -1,8 +1,10 @@
-﻿using Net;
+﻿using MessagePack;
+using Net;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 public class TcpClient : IDisposable
 {
@@ -116,9 +118,9 @@ public class TcpClient : IDisposable
 
 			IsSocketDisposed = true;
 		}
-		catch(ObjectDisposedException)
+		catch(ObjectDisposedException ex)
 		{
-
+			throw ex;
 		}
 
 		IsConnected = false;
@@ -185,6 +187,7 @@ public class TcpClient : IDisposable
 		if (ec != SocketError.Success)
 		{
 			//error
+			Error(ec);
 			Disconnect();
 		}
 
@@ -221,6 +224,7 @@ public class TcpClient : IDisposable
 		if (ec != SocketError.Success)
 		{
 			//error
+			Error(ec);
 			Disconnect();
 		}
 
@@ -250,10 +254,18 @@ public class TcpClient : IDisposable
 				return;
 			}
 
+			var message = MessagePackSerializer.Deserialize<ChatMP>(buffer);
+			var json = MessagePackSerializer.ConvertToJson(buffer);
+			Console.Write($"{message}: ");
+			Console.WriteLine(json);
+
 			_reader.AdvanceTo(buffer.Start, buffer.End);
+
+			ReceiveAsync();
 		}
-		catch (SocketException) { }
+		catch (SocketException ex)
 		{
+			throw ex;
 		}
 	}
 
@@ -290,7 +302,7 @@ public class TcpClient : IDisposable
 
 		if (e.SocketError == SocketError.Success)
 		{
-			Debug.WriteLine("Server 연결 성공");
+			Console.WriteLine("Connected to server...");
 
 			//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
 			var stream = new NetworkStream(_socket);
@@ -306,6 +318,8 @@ public class TcpClient : IDisposable
 			IsConnected = true;
 
 			//Receive
+			ReceiveAsync();
+
 
 			if (IsSocketDisposed)
 				return;
@@ -314,6 +328,7 @@ public class TcpClient : IDisposable
 		else
 		{
 			//error
+			Error(e.SocketError);
 		}
 	}
 
@@ -343,6 +358,7 @@ public class TcpClient : IDisposable
 		else
 		{
 			//Error
+			Error(e.SocketError);
 			DisconnectAsync();
 		}
 
@@ -370,9 +386,26 @@ public class TcpClient : IDisposable
 			return true;
 		else
 		{
+			Error(e.SocketError);
 			DisconnectAsync();
 			return false;
 		}
+	}
+
+	void Error(SocketError error)
+	{
+		if ((error == SocketError.ConnectionAborted) ||
+			(error == SocketError.ConnectionRefused) ||
+			(error == SocketError.ConnectionReset) ||
+			(error == SocketError.Shutdown))
+			return;
+
+		OnError(error);
+	}
+
+	void OnError(SocketError error)
+	{
+		Console.WriteLine(error.ToString());
 	}
 
 

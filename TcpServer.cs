@@ -51,7 +51,7 @@ namespace Net
 			OnStart();
 
 			//최대 팬딩제한 두고 Listen시작.
-			_acceptorSocket.Listen(10);
+			_acceptorSocket.Listen();
 
 			IsStarted = true;
 
@@ -60,6 +60,8 @@ namespace Net
 			//Accept.
 			IsAccepting = true;
 			StartAccept(_acceptorEventArg);
+
+
 
 			return true;
 		}
@@ -109,7 +111,7 @@ namespace Net
 		{
 			if (args.SocketError == SocketError.Success)
 			{
-				Debug.WriteLine("new session connected");
+				Console.WriteLine("new session connected");
 
 				var session = CreateSession();
 

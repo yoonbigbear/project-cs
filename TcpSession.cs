@@ -1,8 +1,10 @@
-﻿using System.Buffers;
+﻿using MessagePack;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Reflection.PortableExecutable;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Net
 {
@@ -65,8 +67,8 @@ namespace Net
 			var stream = new NetworkStream(socket);
 
 			//Reader Writer 셋
-			PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
-			PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
+			reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
+			writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 			// Send/Recv event 콜백 등록
 			_recvEventArg = new();
@@ -81,6 +83,7 @@ namespace Net
 			IsConnected = true;
 
 			//Start Receive
+			ReceiveAsync();
 
 			// 가끔 disconnect로 받을수도잇음
 			if (IsSocketDisposed)
@@ -165,6 +168,7 @@ namespace Net
 
 			if (ec != SocketError.Success)
 			{
+				Error(ec);
 				Debug.Assert(false);
 				Disconnect();
 			}
@@ -180,11 +184,11 @@ namespace Net
 			var received = _socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
 			if (received > 0)
 			{
-
+				//receive handler
 			}
 			if (ec != SocketError.Success)
 			{
-				Debug.Assert(false);
+				Error(ec);
 				Disconnect();
 			}
 
@@ -225,12 +229,32 @@ namespace Net
 					return;
 				}
 
+				var message = MessagePackSerializer.Deserialize<ChatMP>(buffer);
+				var json = MessagePackSerializer.ConvertToJson(buffer);
+				Console.Write($"{message}: ");
+				Console.WriteLine(json);
+
 				reader.AdvanceTo(buffer.Start, buffer.End);
+
+				//클라이언트 리스폰드
+				{
+					var chat = new ChatMP
+					{
+						Name = "client",
+						Message = "Hello server",
+					};
+					var bytes = MessagePackSerializer.Serialize(chat);
+					_socket.Send(bytes);
+				}
+
+				//다음 패킷 receive
+				ReceiveAsync();
 			}
 			catch (Exception ex)
 			{
-
+				throw ex;
 			}
+
 		}
 
 		bool ProcessReceive(SocketAsyncEventArgs e)
@@ -242,8 +266,6 @@ namespace Net
 			if (size > 0)
 			{
 				BytesReceived += size;
-
-				//receive handler
 			}
 
 			if (e.SocketError == SocketError.Success)
@@ -256,6 +278,7 @@ namespace Net
 			else
 			{
 				//Error
+				Error(e.SocketError);
 				Disconnect();
 			}
 			return false;
@@ -277,9 +300,26 @@ namespace Net
 			else
 			{
 				//error
+				Error(e.SocketError);
 				Disconnect();
 				return false;
 			}
+		}
+
+		void Error(SocketError error)
+		{
+			if ((error == SocketError.ConnectionAborted) ||
+				(error == SocketError.ConnectionRefused) ||
+				(error == SocketError.ConnectionReset) ||
+				(error == SocketError.Shutdown))
+				return;
+
+			OnError(error);
+		}
+
+		void OnError(SocketError er)
+		{
+
 		}
 
 		protected void OnConnect() { }
