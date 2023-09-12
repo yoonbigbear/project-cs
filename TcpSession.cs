@@ -252,7 +252,8 @@ namespace Net
 			}
 			catch (Exception ex)
 			{
-				throw ex;
+				Disconnect();
+				return;
 			}
 
 		}
