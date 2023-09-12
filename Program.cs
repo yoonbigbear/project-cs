@@ -18,8 +18,7 @@ internal class Program
 			if (args[0].Equals("server"))
 			{
 
-				TcpServer server = new();
-				server.Tcp(new IPEndPoint(IPAddress.Parse(address), port));
+				TcpServer server = new(new IPEndPoint(IPAddress.Parse(address), port));
 
 				server.Start();
 				Console.WriteLine("Start Server...");

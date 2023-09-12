@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Net;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
@@ -163,11 +164,11 @@ public class TcpClient : IDisposable
 		return true;
 	}
 
-	public virtual async ValueTask<bool> DisconnectAsync() => Disconnect();
+	public virtual void DisconnectAsync() => Disconnect();
 
 	public virtual async ValueTask<bool> ReconnectAsync()
 	{
-		await DisconnectAsync();
+		Disconnect();
 		return ConnectAsync();
 	}
 
@@ -332,10 +333,6 @@ public class TcpClient : IDisposable
 		}
 	}
 
-	async void TryReceive()
-	{
-	}
-
 	bool ProcessReceive(SocketAsyncEventArgs e)
 	{
 		if (!IsConnected)
@@ -363,11 +360,6 @@ public class TcpClient : IDisposable
 		}
 
 		return false;
-	}
-
-	async void TrySend()
-	{
-
 	}
 
 	bool ProcessSend(SocketAsyncEventArgs e)

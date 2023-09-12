@@ -21,11 +21,11 @@ namespace Net
 		public bool IsStarted { get; private set; }
 		public bool IsDisposed { get; private set; }
 
-		public TcpServer() { }
-
-		public void Tcp(EndPoint endPoint) => _endPoint = endPoint;
+		public TcpServer(EndPoint endPoint) => _endPoint = endPoint;
 		Socket CreateSocket() => new Socket(_endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 		TcpSession CreateSession() => new TcpSession();
+
+
 
 		public bool Start()
 		{
