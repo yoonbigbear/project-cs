@@ -53,6 +53,7 @@ public class TcpNet : IDisposable
 		{
 			//서버에 연결.
 			_socket.Connect(EndPoint);
+			ProcessConnect(_connectEventArg);
 		}
 		catch (SocketException e) 
 		{

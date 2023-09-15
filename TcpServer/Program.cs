@@ -20,12 +20,6 @@ internal class Program
 		Console.WriteLine("Start Server...");
 		while (true)
 		{
-			if (Console.ReadKey(true).Key == ConsoleKey.Escape)
-			{
-				return;
-			}
-
-
 			Thread.Yield();
 		}
 
