@@ -29,6 +29,6 @@ jobs:
       run: dotnet restore
     
     - name: Build
-      run: dotnet build --configuration Debug
+      run: dotnet .\project-cs.sln build --configuration Debug
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet .\project-cs.sln build --configuration Release
