@@ -22,3 +22,4 @@
 - [ ] stress test
 - [ ] unit test
 - [ ] packet size optimize
+- [ ] Git Action Workflow 구성
