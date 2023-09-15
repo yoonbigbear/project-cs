@@ -66,8 +66,9 @@ jobs:
       with:
         dotnet-version: 7.0.x
     - name: Instal dependencies
-    run: dotnet restore
+      run: dotnet restore
+    
     - name: Build
-    run: dotnet build --configuration Debug --no-restore
+      run: dotnet build --configuration Debug --no-restore
     - name: Build
-    run: dotnet build --configuration Release --no-restore 
+      run: dotnet build --configuration Release --no-restore 
