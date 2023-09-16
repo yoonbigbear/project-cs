@@ -6,6 +6,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Net
 {
@@ -13,8 +15,10 @@ namespace Net
 	{
 		Socket _acceptorSocket;
 		SocketAsyncEventArgs _acceptorEventArg;
-
 		EndPoint _endPoint;
+
+		Dictionary<int, TcpSession> _tcpSessions = new();
+		static int sessionid;
 
 		public bool IsSocketDisposed { get; private set; } = true;
 		public bool IsAccepting { get; private set; }
@@ -25,6 +29,14 @@ namespace Net
 		Socket CreateSocket() => new Socket(_endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 		TcpSession CreateSession() => new TcpSession();
 
+
+		public int RegisterSession(TcpSession session)
+		{
+			_tcpSessions.Add(++sessionid, session);
+			return sessionid;
+		}
+		public void UnregisterSession(int sessionId) => _tcpSessions.Remove(sessionid);
+		public TcpSession FindSession(int index) => _tcpSessions[index];
 
 
 		public bool Start()
@@ -65,9 +77,9 @@ namespace Net
 
 			return true;
 		}
-
 		public bool Stop()
 		{
+
 			Debug.Assert(IsStarted);
 			if (!IsStarted)
 				return false;
@@ -106,12 +118,11 @@ namespace Net
 			if (!_acceptorSocket.AcceptAsync(args))
 				ProcessAccept(args);
 		}
-
 		void ProcessAccept(SocketAsyncEventArgs args)
 		{
 			if (args.SocketError == SocketError.Success)
 			{
-				Console.WriteLine("new session connected");
+				OnConnect();
 
 				var session = CreateSession();
 
@@ -123,6 +134,8 @@ namespace Net
 				//에러 이슈잉
 				Debug.Assert(false, "Socket Accept Failure");
 			}
+
+			OnConnected();
 
 			//다시 Accept 재시작
 			if (IsAccepting)
@@ -147,9 +160,7 @@ namespace Net
 			IsDisposed = true;
 
 			GC.SuppressFinalize(this);
-			throw new NotImplementedException();
 		}
-
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!IsDisposed)
@@ -167,14 +178,13 @@ namespace Net
 			IsDisposed = true;
 		}
 
-		protected virtual void OnStart() { }
-		protected virtual void OnStarted() { }
+		protected virtual void OnStart() {}
+		protected virtual void OnStarted() {}
 		protected virtual void OnStop() { }
 		protected virtual void OnStopped() { }
 		protected virtual void OnConnect() { }
 		protected virtual void OnConnected() { }
 		protected virtual void OnDisconnect() { }
 		protected virtual void OnDisconnected() { }
-
 	}
 }

@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 
-public class TcpNet : IDisposable
+public class ServerSession : IDisposable
 {
 	public string Address { get; set; }
 	public int Port { get; set; }
@@ -23,7 +23,7 @@ public class TcpNet : IDisposable
 
 	protected virtual Socket CreateSocket() { return new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); }
 
-	public TcpNet(EndPoint endPoint, string address, int port)
+	public ServerSession(EndPoint endPoint, string address, int port)
 	{
 		EndPoint = endPoint;
 		Address = address;

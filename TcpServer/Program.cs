@@ -14,7 +14,7 @@ internal class Program
 		int port = 8081;
 
 
-		TcpServer server = new(new IPEndPoint(IPAddress.Parse(address), port));
+		Server server = new(new IPEndPoint(IPAddress.Parse(address), port));
 
 		server.Start();
 		Console.WriteLine("Start Server...");

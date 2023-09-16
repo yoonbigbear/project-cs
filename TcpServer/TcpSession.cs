@@ -318,14 +318,10 @@ namespace Net
 			OnError(error);
 		}
 
-		void OnError(SocketError er)
-		{
-
-		}
-
-		protected void OnConnect() { }
-		protected void OnConnected() { }
-		protected void OnDisconnect() { }
-		protected void OnDisconnected() { }
+		protected virtual void OnError(SocketError er) { }
+		protected virtual void OnConnect() { }
+		protected virtual void OnConnected() { }
+		protected virtual void OnDisconnect() { }
+		protected virtual void OnDisconnected() { }
 	}
 }
