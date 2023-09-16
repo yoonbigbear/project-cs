@@ -8,12 +8,12 @@ public class Program
 	{
 		string address = "127.0.0.1";
 		int port = 8081;
-		HashSet<TcpNet> sessions = new(); ;
+		HashSet<ServerSession> sessions = new(); ;
 
 		for (int i = 0; i < 1110; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
-			TcpNet server = new TcpNet(ep, address, port);
+			ServerSession server = new ServerSession(ep, address, port);
 			if (server.Connect())
 				sessions.Add(server);
 		}
