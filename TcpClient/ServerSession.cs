@@ -118,6 +118,7 @@ public class ServerSession : IDisposable
 		}
 		catch(ObjectDisposedException ex)
 		{
+			Console.WriteLine($"Failed to receive message {ex.Message}");
 			throw ex;
 		}
 
@@ -261,9 +262,10 @@ public class ServerSession : IDisposable
 
 			ReceiveAsync();
 		}
-		catch (SocketException ex)
+		catch (Exception ex)
 		{
-			throw ex;
+			Console.WriteLine($"Failed to receive message {ex.Message}");
+			Disconnect();
 		}
 	}
 
