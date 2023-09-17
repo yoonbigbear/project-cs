@@ -1,4 +1,5 @@
-﻿using MessagePack;
+﻿using Google.Protobuf;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Principal;
 
@@ -10,7 +11,7 @@ public class Program
 		int port = 8081;
 		HashSet<ServerSession> sessions = new(); ;
 
-		for (int i = 0; i < 1110; ++i)
+		for (int i = 0; i < 5; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerSession server = new ServerSession(ep, address, port);
@@ -18,21 +19,22 @@ public class Program
 				sessions.Add(server);
 		}
 
+		Chat chat = new Chat
+		{
+			Header = 1, // 16/16 씩 나눠서 키, 사이즈로?
+			Message = "chat from",
+		}; //매번 힙할당 마음에 안든다. 수정할 필요 있음.
+
+		chat.CalculateSize();
 		Console.WriteLine("Start Client...");
 		while (true)
 		{
+			Thread.Sleep(2000);
 
-				Thread.Sleep(2000);
-
-				var chat = new ChatMP
-				{
-					Name = "client",
-					Message = "Hello server",
-				};
-				var bytes = MessagePackSerializer.Serialize(chat);
-
-				foreach (var e in sessions)
-					e.Send(bytes);
+			foreach (var e in sessions)
+			{
+				e.SendAsync(chat.ToByteArray());
+			}
 		}
 
 		foreach (var e in sessions)
