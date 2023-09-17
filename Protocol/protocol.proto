@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message Chat {
+  int32 header = 1;
+  string message = 2;
+}

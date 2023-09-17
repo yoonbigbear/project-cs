@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks.Dataflow;
 
 namespace Net
 {
@@ -17,8 +18,6 @@ namespace Net
 		SocketAsyncEventArgs _acceptorEventArg;
 		EndPoint _endPoint;
 
-		Dictionary<int, TcpSession> _tcpSessions = new();
-		static int sessionid;
 
 		public bool IsSocketDisposed { get; private set; } = true;
 		public bool IsAccepting { get; private set; }
@@ -27,17 +26,6 @@ namespace Net
 
 		public TcpServer(EndPoint endPoint) => _endPoint = endPoint;
 		Socket CreateSocket() => new Socket(_endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-		TcpSession CreateSession() => new TcpSession();
-
-
-		public int RegisterSession(TcpSession session)
-		{
-			_tcpSessions.Add(++sessionid, session);
-			return sessionid;
-		}
-		public void UnregisterSession(int sessionId) => _tcpSessions.Remove(sessionid);
-		public TcpSession FindSession(int index) => _tcpSessions[index];
-
 
 		public bool Start()
 		{
@@ -122,12 +110,7 @@ namespace Net
 		{
 			if (args.SocketError == SocketError.Success)
 			{
-				OnConnect();
-
-				var session = CreateSession();
-
-				//들어온 소켓을 세션의 소켓으로 넘긴다.
-				session.Connect(args.AcceptSocket);
+				OnConnect(args);
 			}
 			else
 			{
@@ -182,7 +165,7 @@ namespace Net
 		protected virtual void OnStarted() {}
 		protected virtual void OnStop() { }
 		protected virtual void OnStopped() { }
-		protected virtual void OnConnect() { }
+		protected virtual void OnConnect(SocketAsyncEventArgs arg) { }
 		protected virtual void OnConnected() { }
 		protected virtual void OnDisconnect() { }
 		protected virtual void OnDisconnected() { }

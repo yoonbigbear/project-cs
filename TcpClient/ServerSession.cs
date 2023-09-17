@@ -1,4 +1,4 @@
-﻿using MessagePack;
+﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
@@ -70,7 +70,7 @@ public class ServerSession : IDisposable
 			_sendEventArg.Dispose();
 
 			//error
-			throw e;
+			Error(e.SocketErrorCode);
 
 		}
 
@@ -253,10 +253,7 @@ public class ServerSession : IDisposable
 				return;
 			}
 
-			var message = MessagePackSerializer.Deserialize<ChatMP>(buffer);
-			var json = MessagePackSerializer.ConvertToJson(buffer);
-			Console.Write($"{message}: ");
-			Console.WriteLine(json);
+			OnPacketRead(buffer);
 
 			_reader.AdvanceTo(buffer.Start, buffer.End);
 
@@ -267,6 +264,12 @@ public class ServerSession : IDisposable
 			Console.WriteLine($"Failed to receive message {ex.Message}");
 			Disconnect();
 		}
+	}
+
+	protected virtual void OnPacketRead(ReadOnlySequence<byte> buf)
+	{
+		var chat = Chat.Parser.ParseFrom(buf);
+		Console.WriteLine(chat);
 	}
 
 	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)

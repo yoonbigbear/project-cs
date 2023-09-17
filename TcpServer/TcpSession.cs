@@ -1,5 +1,4 @@
-﻿using MessagePack;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
@@ -20,10 +19,13 @@ namespace Net
 		protected PipeWriter writer { get; set; }
 		SocketAsyncEventArgs _sendEventArg;
 
+		protected Server Server { get; private set; }
 		public bool IsSocketDisposed { get; private set; }
 		public bool IsConnected { get; private set; }
 		public int BytesReceived { get; private set; }
 		public bool IsDIsposed { get; private set; }
+
+		public TcpSession(Server server) => Server = server;
 
 		public void Dispose()
 		{
@@ -67,6 +69,7 @@ namespace Net
 			var stream = new NetworkStream(socket);
 
 			//Reader Writer 셋
+			// 버퍼 사이즈가 ushort max인데 너무 큰가?
 			reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
 			writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
@@ -229,23 +232,9 @@ namespace Net
 					return;
 				}
 
-				var message = MessagePackSerializer.Deserialize<ChatMP>(buffer);
-				var json = MessagePackSerializer.ConvertToJson(buffer);
-				Console.Write($"{message}: ");
-				Console.WriteLine(json);
+				OnPacketRead(buffer);
 
 				reader.AdvanceTo(buffer.Start, buffer.End);
-
-				//클라이언트 리스폰드
-				{
-					var chat = new ChatMP
-					{
-						Name = "client",
-						Message = "Hello server",
-					};
-					var bytes = MessagePackSerializer.Serialize(chat);
-					_socket.Send(bytes);
-				}
 
 				//다음 패킷 receive
 				ReceiveAsync();
@@ -323,5 +312,6 @@ namespace Net
 		protected virtual void OnConnected() { }
 		protected virtual void OnDisconnect() { }
 		protected virtual void OnDisconnected() { }
+		protected virtual void OnPacketRead(ReadOnlySequence<byte> buf) { }
 	}
 }
