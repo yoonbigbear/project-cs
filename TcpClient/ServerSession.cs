@@ -8,6 +8,7 @@ public class ServerSession : IDisposable
 	public string Address { get; set; }
 	public int Port { get; set; }
 	public EndPoint EndPoint { get; set; }
+	public PacketHandler PacketHandler { get; set; } = new();
 
 	PipeReader _reader;
 	PipeWriter _writer;
@@ -268,8 +269,7 @@ public class ServerSession : IDisposable
 
 	protected virtual void OnPacketRead(ReadOnlySequence<byte> buf)
 	{
-		var chat = Chat.Parser.ParseFrom(buf);
-		Console.WriteLine(chat);
+		PacketHandler.Push(buf);
 	}
 
 	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)

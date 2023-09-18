@@ -18,7 +18,6 @@ namespace Net
 		SocketAsyncEventArgs _acceptorEventArg;
 		EndPoint _endPoint;
 
-
 		public bool IsSocketDisposed { get; private set; } = true;
 		public bool IsAccepting { get; private set; }
 		public bool IsStarted { get; private set; }

@@ -22,12 +22,12 @@ public static partial class ProtocolReflection {
   static ProtocolReflection() {
     byte[] descriptorData = global::System.Convert.FromBase64String(
         string.Concat(
-          "Cg5wcm90b2NvbC5wcm90byInCgRDaGF0Eg4KBmhlYWRlchgBIAEoBRIPCgdt",
-          "ZXNzYWdlGAIgASgJYgZwcm90bzM="));
+          "Cg5wcm90b2NvbC5wcm90byIXCgRDaGF0Eg8KB21lc3NhZ2UYASABKAliBnBy",
+          "b3RvMw=="));
     descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
         new pbr::FileDescriptor[] { },
         new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-          new pbr::GeneratedClrTypeInfo(typeof(global::Chat), global::Chat.Parser, new[]{ "Header", "Message" }, null, null, null, null)
+          new pbr::GeneratedClrTypeInfo(typeof(global::Chat), global::Chat.Parser, new[]{ "Message" }, null, null, null, null)
         }));
   }
   #endregion
@@ -68,7 +68,6 @@ public sealed partial class Chat : pb::IMessage<Chat>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public Chat(Chat other) : this() {
-    header_ = other.header_;
     message_ = other.message_;
     _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
   }
@@ -79,20 +78,8 @@ public sealed partial class Chat : pb::IMessage<Chat>
     return new Chat(this);
   }
 
-  /// <summary>Field number for the "header" field.</summary>
-  public const int HeaderFieldNumber = 1;
-  private int header_;
-  [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-  [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-  public int Header {
-    get { return header_; }
-    set {
-      header_ = value;
-    }
-  }
-
   /// <summary>Field number for the "message" field.</summary>
-  public const int MessageFieldNumber = 2;
+  public const int MessageFieldNumber = 1;
   private string message_ = "";
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -118,7 +105,6 @@ public sealed partial class Chat : pb::IMessage<Chat>
     if (ReferenceEquals(other, this)) {
       return true;
     }
-    if (Header != other.Header) return false;
     if (Message != other.Message) return false;
     return Equals(_unknownFields, other._unknownFields);
   }
@@ -127,7 +113,6 @@ public sealed partial class Chat : pb::IMessage<Chat>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public override int GetHashCode() {
     int hash = 1;
-    if (Header != 0) hash ^= Header.GetHashCode();
     if (Message.Length != 0) hash ^= Message.GetHashCode();
     if (_unknownFields != null) {
       hash ^= _unknownFields.GetHashCode();
@@ -147,12 +132,8 @@ public sealed partial class Chat : pb::IMessage<Chat>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
     output.WriteRawMessage(this);
   #else
-    if (Header != 0) {
-      output.WriteRawTag(8);
-      output.WriteInt32(Header);
-    }
     if (Message.Length != 0) {
-      output.WriteRawTag(18);
+      output.WriteRawTag(10);
       output.WriteString(Message);
     }
     if (_unknownFields != null) {
@@ -165,12 +146,8 @@ public sealed partial class Chat : pb::IMessage<Chat>
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-    if (Header != 0) {
-      output.WriteRawTag(8);
-      output.WriteInt32(Header);
-    }
     if (Message.Length != 0) {
-      output.WriteRawTag(18);
+      output.WriteRawTag(10);
       output.WriteString(Message);
     }
     if (_unknownFields != null) {
@@ -183,9 +160,6 @@ public sealed partial class Chat : pb::IMessage<Chat>
   [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
   public int CalculateSize() {
     int size = 0;
-    if (Header != 0) {
-      size += 1 + pb::CodedOutputStream.ComputeInt32Size(Header);
-    }
     if (Message.Length != 0) {
       size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
     }
@@ -200,9 +174,6 @@ public sealed partial class Chat : pb::IMessage<Chat>
   public void MergeFrom(Chat other) {
     if (other == null) {
       return;
-    }
-    if (other.Header != 0) {
-      Header = other.Header;
     }
     if (other.Message.Length != 0) {
       Message = other.Message;
@@ -222,11 +193,7 @@ public sealed partial class Chat : pb::IMessage<Chat>
         default:
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
           break;
-        case 8: {
-          Header = input.ReadInt32();
-          break;
-        }
-        case 18: {
+        case 10: {
           Message = input.ReadString();
           break;
         }
@@ -245,11 +212,7 @@ public sealed partial class Chat : pb::IMessage<Chat>
         default:
           _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
           break;
-        case 8: {
-          Header = input.ReadInt32();
-          break;
-        }
-        case 18: {
+        case 10: {
           Message = input.ReadString();
           break;
         }

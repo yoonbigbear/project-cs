@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security.Principal;
 
 public class Program
@@ -21,11 +22,11 @@ public class Program
 
 		Chat chat = new Chat
 		{
-			Header = 1, // 16/16 씩 나눠서 키, 사이즈로?
 			Message = "chat from",
-		}; //매번 힙할당 마음에 안든다. 수정할 필요 있음.
+		};
 
-		chat.CalculateSize();
+		
+
 		Console.WriteLine("Start Client...");
 		while (true)
 		{
@@ -33,7 +34,13 @@ public class Program
 
 			foreach (var e in sessions)
 			{
-				e.SendAsync(chat.ToByteArray());
+				e.SendAsync(e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray()));
+
+				var pkt = e.PacketHandler.Pop();
+				if (pkt.HasValue)
+				{
+					e.PacketHandler.Deserialize(pkt.Value);
+				}
 			}
 		}
 
