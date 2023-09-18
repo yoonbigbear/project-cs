@@ -12,7 +12,7 @@ public class Program
 		int port = 8081;
 		HashSet<ServerSession> sessions = new(); ;
 
-		for (int i = 0; i < 5; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerSession server = new ServerSession(ep, address, port);
@@ -30,12 +30,30 @@ public class Program
 		Console.WriteLine("Start Client...");
 		while (true)
 		{
-			Thread.Sleep(2000);
+			Thread.Sleep(1000);
 
 			foreach (var e in sessions)
 			{
-				e.SendAsync(e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray()));
+				GC.Collect();
+				Thread.Sleep(1000);
 
+				var before = GC.GetTotalMemory(false);
+				e.SendAsync(e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray()));
+				var after = GC.GetTotalMemory(false);
+				GC.Collect();
+				Thread.Sleep(1000);
+				Console.WriteLine($"Serialize array segtype heap alloc :{after - before}");
+
+				before = GC.GetTotalMemory(false);
+				Span<byte> buf = stackalloc byte[4 + chat.CalculateSize()];
+				e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray(), ref buf);
+				after = GC.GetTotalMemory(false);
+
+				GC.Collect();
+				Thread.Sleep(1000);
+				Console.WriteLine($"Serialize span heap alloc :{after - before}");
+
+				e.Send(buf);
 				var pkt = e.PacketHandler.Pop();
 				if (pkt.HasValue)
 				{
