@@ -1,4 +1,6 @@
 ﻿using Net;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -6,8 +8,11 @@ public class Server : TcpServer
 {
 	public Server(EndPoint endPoint) : base(endPoint) { }
 
-	protected Dictionary<int, TcpSession> _tcpSessions = new();
 	static int sessionid;
+
+
+	protected Dictionary<int, TcpSession> _tcpSessions { get; set; } = new();
+	public PacketHandler PacketHandler { get; set; } = new PacketHandler();
 
 	Session CreateSession() => new(this);
 
@@ -57,7 +62,6 @@ public class Server : TcpServer
 
 	// 세션 연결 완료.
 	protected override void OnConnected() { }
-	// 
 	protected override void OnDisconnect() { }
 	protected override void OnDisconnected() { }
 }

@@ -19,6 +19,13 @@ internal class Program
 		Console.WriteLine("Start Server...");
 		while (true)
 		{
+			var pkt = server.PacketHandler.Pop();
+			if (pkt.HasValue)
+			{
+				server.PacketHandler.Deserialize(pkt.Value);
+				server.Broadcast(pkt.Value.FirstSpan);
+			}
+
 			Thread.Yield();
 		}
 

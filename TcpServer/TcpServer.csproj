@@ -5,6 +5,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>TcpServer</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
