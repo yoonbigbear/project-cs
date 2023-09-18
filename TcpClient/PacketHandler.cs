@@ -4,6 +4,7 @@ public enum PacketId
 {
 	CHAT = 1,
 }
+
 public class PacketHandler
 {
 	public ConcurrentQueue<ReadOnlySequence<byte>> packetBuffers { get; set; } = new ConcurrentQueue<ReadOnlySequence<byte>>();
@@ -36,6 +37,7 @@ public class PacketHandler
 
 	public Memory<byte> Serialize(PacketId id, byte[] bytes)
 	{
+
 		switch ((PacketId)id)
 		{
 			case PacketId.CHAT:
@@ -48,5 +50,19 @@ public class PacketHandler
 				}
 		}
 		return null;
+	}
+
+	public void Serialize(PacketId id, byte[] bytes, ref Span<byte> buf)
+	{
+		switch ((PacketId)id)
+		{
+			case PacketId.CHAT:
+				{
+					BitConverter.GetBytes((short)PacketId.CHAT).AsSpan().CopyTo(buf.Slice(0));
+					BitConverter.GetBytes((short)bytes.Length).AsSpan().CopyTo(buf.Slice(2));
+					bytes.AsSpan().CopyTo(buf.Slice(4));
+				}
+				break;
+		}
 	}
 }
