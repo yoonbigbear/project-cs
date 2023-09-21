@@ -1,6 +1,7 @@
 ﻿using Google.Protobuf;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Principal;
 
@@ -25,33 +26,17 @@ public class Program
 			Message = "chat from",
 		};
 
-		
-
 		Console.WriteLine("Start Client...");
 		while (true)
 		{
-			Thread.Sleep(1000);
+			Thread.Sleep(100);
 
 			foreach (var e in sessions)
 			{
-				GC.Collect();
-				Thread.Sleep(1000);
 
-				var before = GC.GetTotalMemory(false);
-				e.SendAsync(e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray()));
-				var after = GC.GetTotalMemory(false);
-				GC.Collect();
-				Thread.Sleep(1000);
-				Console.WriteLine($"Serialize array segtype heap alloc :{after - before}");
-
-				before = GC.GetTotalMemory(false);
+				var bytes = chat.ToByteArray();
 				Span<byte> buf = stackalloc byte[4 + chat.CalculateSize()];
-				e.PacketHandler.Serialize(PacketId.CHAT, chat.ToByteArray(), ref buf);
-				after = GC.GetTotalMemory(false);
-
-				GC.Collect();
-				Thread.Sleep(1000);
-				Console.WriteLine($"Serialize span heap alloc :{after - before}");
+				e.PacketHandler.Serialize(PacketId.CHAT, bytes, ref buf);
 
 				e.Send(buf);
 				var pkt = e.PacketHandler.Pop();
