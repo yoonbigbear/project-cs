@@ -12,11 +12,10 @@ internal class Program
 		string address = "127.0.0.1";
 		int port = 8081;
 
-
 		Server server = new(new IPEndPoint(IPAddress.Parse(address), port));
-
 		server.Start();
 		Console.WriteLine("Start Server...");
+
 		while (true)
 		{
 			var pkt = server.PacketHandler.Pop();

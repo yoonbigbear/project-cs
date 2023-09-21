@@ -1,8 +1,9 @@
 ﻿using System.Buffers;
 using System.Collections.Concurrent;
-public enum PacketId
+
+public enum PacketId : ushort
 {
-	CHAT = 1,
+	CHAT = 21000,
 }
 
 public class PacketHandler
@@ -20,6 +21,7 @@ public class PacketHandler
 			return packet;
 		return null;
 	}
+
 	public void Deserialize(ReadOnlySequence<byte> packet)
 	{
 		var id = BitConverter.ToInt16(packet.FirstSpan.Slice(0, 2/*id*/));
@@ -35,34 +37,13 @@ public class PacketHandler
 		}
 	}
 
-	public Memory<byte> Serialize(PacketId id, byte[] bytes)
-	{
-
-		switch ((PacketId)id)
-		{
-			case PacketId.CHAT:
-				{
-					ArraySegment<byte> arr = new ArraySegment<byte>(new byte[4 + bytes.Length]);
-					Buffer.BlockCopy(BitConverter.GetBytes((short)PacketId.CHAT), 0, arr.Array, 0, 2);
-					Buffer.BlockCopy(BitConverter.GetBytes((short)bytes.Length), 0, arr.Array, 2, 2);
-					Buffer.BlockCopy(bytes, 0, arr.Array, 4, bytes.Length);
-					return arr;
-				}
-		}
-		return null;
-	}
-
 	public void Serialize(PacketId id, byte[] bytes, ref Span<byte> buf)
 	{
-		switch ((PacketId)id)
-		{
-			case PacketId.CHAT:
-				{
-					BitConverter.GetBytes((short)PacketId.CHAT).AsSpan().CopyTo(buf.Slice(0));
-					BitConverter.GetBytes((short)bytes.Length).AsSpan().CopyTo(buf.Slice(2));
-					bytes.AsSpan().CopyTo(buf.Slice(4));
-				}
-				break;
-		}
+		buf[0] = (byte)(((ushort)id) & 0x00FF);
+		buf[1] = (byte)((((ushort)id) & 0xFF00) >> 8);
+		buf[2] = (byte)(((ushort)bytes.Length) & 0x00FF);
+		buf[3] = (byte)((((ushort)bytes.Length) & 0xFF00) >> 8);
+		bytes.CopyTo(buf.Slice(4));
 	}
+
 }
