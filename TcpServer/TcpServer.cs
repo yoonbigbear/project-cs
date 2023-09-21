@@ -60,8 +60,6 @@ namespace Net
 			IsAccepting = true;
 			StartAccept(_acceptorEventArg);
 
-
-
 			return true;
 		}
 		public bool Stop()

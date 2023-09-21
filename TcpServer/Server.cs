@@ -10,7 +10,6 @@ public class Server : TcpServer
 
 	static int sessionid;
 
-
 	protected Dictionary<int, TcpSession> _tcpSessions { get; set; } = new();
 	public PacketHandler PacketHandler { get; set; } = new PacketHandler();
 
@@ -32,7 +31,10 @@ public class Server : TcpServer
 	}
 
 	//listening 전 서버 시작시 필요한 기본 세팅
-	protected override void OnStart() { }
+	protected override void OnStart() 
+	{
+		PacketHandler.Handler.Add(PacketId.CHAT, ChatCallback);
+	}
 	// listen 호출 후
 	protected override void OnStarted() { }
 	// accept 막기 전
@@ -64,4 +66,11 @@ public class Server : TcpServer
 	protected override void OnConnected() { }
 	protected override void OnDisconnect() { }
 	protected override void OnDisconnected() { }
+
+
+	public static void ChatCallback(ReadOnlySequence<byte> sequence)
+	{
+		var msg = Chat.Parser.ParseFrom(sequence);
+		Console.WriteLine($"{msg}");
+	}
 }
