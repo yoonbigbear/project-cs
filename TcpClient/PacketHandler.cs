@@ -10,6 +10,8 @@ public class PacketHandler
 {
 	public ConcurrentQueue<ReadOnlySequence<byte>> packetBuffers { get; set; } = new ConcurrentQueue<ReadOnlySequence<byte>>();
 
+	public static Dictionary<PacketId, Action<ReadOnlySequence<byte>>> Handler { get; set; } = new();
+
 	public void Push(ReadOnlySequence<byte> packet)
 	{
 		packetBuffers.Enqueue(packet);
@@ -24,17 +26,20 @@ public class PacketHandler
 
 	public void Deserialize(ReadOnlySequence<byte> packet)
 	{
-		var id = BitConverter.ToInt16(packet.FirstSpan.Slice(0, 2/*id*/));
-		var size = BitConverter.ToInt16(packet.FirstSpan.Slice(2, 2/*size*/));
-		var body = packet.FirstSpan.Slice(4, size);
+		var id = BitConverter.ToUInt16(packet.FirstSpan.Slice(0, 2/*id*/));
+		var size = BitConverter.ToUInt16(packet.FirstSpan.Slice(2, 2/*size*/));
+		var body = packet.Slice(4, size);
 
-		switch ((PacketId)id)
+		//원래는 여기서 실행 안함
+		try
 		{
-			case PacketId.CHAT:
-				var msg = Chat.Parser.ParseFrom(body);
-				Console.WriteLine($"{msg}");
-				break;
+			Handler[(PacketId)id].Invoke(body);
 		}
+		catch (Exception e)
+		{
+			throw e;
+		}
+
 	}
 
 	public void Serialize(PacketId id, byte[] bytes, ref Span<byte> buf)
@@ -45,5 +50,4 @@ public class PacketHandler
 		buf[3] = (byte)((((ushort)bytes.Length) & 0xFF00) >> 8);
 		bytes.CopyTo(buf.Slice(4));
 	}
-
 }

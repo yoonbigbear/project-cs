@@ -10,12 +10,12 @@ public class ServerSession : IDisposable
 	public EndPoint EndPoint { get; set; }
 	public PacketHandler PacketHandler { get; set; } = new();
 
-	PipeReader _reader;
-	PipeWriter _writer;
+	PipeReader? _reader;
+	PipeWriter? _writer;
 	SocketAsyncEventArgs _connectEventArg;
 	SocketAsyncEventArgs _recvEventArg;
 	SocketAsyncEventArgs _sendEventArg;
-	Socket _socket;
+	Socket? _socket;
 
 	public bool IsConnected { get; private set; } = false;
 	public bool IsConnecting { get; private set; }
@@ -92,8 +92,8 @@ public class ServerSession : IDisposable
 			Socket.CancelConnectAsync(_connectEventArg);
 		}
 
-		_reader.Complete();
-		_writer.Complete();
+		_reader?.Complete();
+		_writer?.Complete();
 
 		_connectEventArg.Completed -= OnAsyncComplete;
 		_recvEventArg.Completed -= OnAsyncComplete;
@@ -103,11 +103,11 @@ public class ServerSession : IDisposable
 		{
 			try
 			{
-				_socket.Shutdown(SocketShutdown.Both);
+				_socket?.Shutdown(SocketShutdown.Both);
 			}
 			catch (SocketException) { }
 
-			_socket.Close();
+			_socket?.Close();
 
 			_socket.Dispose();
 
@@ -202,8 +202,8 @@ public class ServerSession : IDisposable
 		if (buffer.IsEmpty)
 			return false;
 
-		_writer.WriteAsync(buffer);
-
+		_writer?.WriteAsync(buffer);
+			
 		return true;
 	}
 
