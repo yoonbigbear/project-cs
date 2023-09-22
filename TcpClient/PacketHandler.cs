@@ -1,5 +1,7 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 public enum PacketId : ushort
 {
@@ -37,17 +39,21 @@ public class PacketHandler
 		}
 		catch (Exception e)
 		{
-			throw e;
+			Console.WriteLine(e.ToString());
 		}
 
 	}
 
-	public void Serialize(PacketId id, byte[] bytes, ref Span<byte> buf)
+	public void Serialize(PacketId id, byte[] bytes, ServerSession e)
 	{
+		Span<byte> buf = stackalloc byte[4 + bytes.Length];
+
 		buf[0] = (byte)(((ushort)id) & 0x00FF);
 		buf[1] = (byte)((((ushort)id) & 0xFF00) >> 8);
 		buf[2] = (byte)(((ushort)bytes.Length) & 0x00FF);
 		buf[3] = (byte)((((ushort)bytes.Length) & 0xFF00) >> 8);
 		bytes.CopyTo(buf.Slice(4));
+
+		e.Send(buf);
 	}
 }

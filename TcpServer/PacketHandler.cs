@@ -39,7 +39,6 @@ public class PacketHandler
 		{
 			throw e;
 		}
-
 	}
 
 	public void Serialize(PacketId id, byte[] bytes, ref Span<byte> buf)

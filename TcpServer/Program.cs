@@ -25,8 +25,6 @@ internal class Program
 				server.PacketHandler.Deserialize(pkt.Value);
 				server.Broadcast(pkt.Value.FirstSpan);
 			}
-
-			Thread.Yield();
 		}
 
 		server.Stop();

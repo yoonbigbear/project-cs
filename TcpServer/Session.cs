@@ -17,7 +17,7 @@ public class Session : TcpSession
 	protected override void OnDisconnected() { }
 	protected override void OnPacketRead(ReadOnlySequence<byte> reads)
 	{
-		Console.WriteLine($"received client packet t:{Thread.CurrentThread.ManagedThreadId}");
+		//Console.WriteLine($"received client packet t:{Thread.CurrentThread.ManagedThreadId}");
 		Server.PacketHandler.Push(reads);
 	}
 }

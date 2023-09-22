@@ -14,9 +14,10 @@ public class Program
 		int port = 8081;
 		HashSet<ServerSession> sessions = new(); ;
 
+		//패킷 핸들러 등록
 		PacketHandler.Handler.Add(PacketId.CHAT, ChatCallback);
 
-		for (int i = 0; i < 1; ++i)
+		for (int i = 0; i < 10000; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerSession server = new ServerSession(ep, address, port);
@@ -35,20 +36,19 @@ public class Program
 		Console.WriteLine("Start Client...");
 		while (true)
 		{
-			Thread.Sleep(100);
+			Thread.Sleep(1000);
 
 			foreach (var e in sessions)
 			{
-
-				Span<byte> buf = stackalloc byte[4 + chat.CalculateSize()];
-				e.PacketHandler.Serialize(PacketId.CHAT, bytes, ref buf);
-
-				e.Send(buf);
-				var pkt = e.PacketHandler.Pop();
-				if (pkt.HasValue)
 				{
-					e.PacketHandler.Deserialize(pkt.Value);
+					e.PacketHandler.Serialize(PacketId.CHAT, bytes, e);
+					//e.Send(buf);
 				}
+				var pkt = e.PacketHandler.Pop();
+				//if (pkt.HasValue)
+				//{
+				//	e.PacketHandler.Deserialize(pkt.Value);
+				//}
 			}
 		}
 
@@ -59,7 +59,7 @@ public class Program
 	public static void ChatCallback(ReadOnlySequence<byte> sequence)
 	{
 		var msg = Chat.Parser.ParseFrom(sequence);
-		Console.WriteLine($"{msg}");
+		//Console.WriteLine($"{msg}");
 	}
 
 }

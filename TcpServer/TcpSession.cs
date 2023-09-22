@@ -69,8 +69,7 @@ namespace Net
 			var stream = new NetworkStream(socket);
 
 			//Reader Writer 셋
-			// 버퍼 사이즈가 ushort max인데 너무 큰가?
-			reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
+			reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
 			writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 			// Send/Recv event 콜백 등록
@@ -172,7 +171,6 @@ namespace Net
 			if (ec != SocketError.Success)
 			{
 				Error(ec);
-				Debug.Assert(false);
 				Disconnect();
 			}
 
@@ -232,14 +230,14 @@ namespace Net
 					return;
 				}
 
-				OnPacketRead(buffer);
+				//OnPacketRead(buffer);
 
 				reader.AdvanceTo(buffer.Start, buffer.End);
 
 				//다음 패킷 receive
 				ReceiveAsync();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Disconnect();
 				return;

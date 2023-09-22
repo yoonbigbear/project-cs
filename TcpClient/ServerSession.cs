@@ -15,7 +15,7 @@ public class ServerSession : IDisposable
 	SocketAsyncEventArgs _connectEventArg;
 	SocketAsyncEventArgs _recvEventArg;
 	SocketAsyncEventArgs _sendEventArg;
-	Socket? _socket;
+	Socket _socket;
 
 	public bool IsConnected { get; private set; } = false;
 	public bool IsConnecting { get; private set; }
@@ -165,7 +165,7 @@ public class ServerSession : IDisposable
 
 	public virtual void DisconnectAsync() => Disconnect();
 
-	public virtual async ValueTask<bool> ReconnectAsync()
+	public virtual bool ReconnectAsync()
 	{
 		Disconnect();
 		return ConnectAsync();
@@ -183,7 +183,7 @@ public class ServerSession : IDisposable
 		if (sent > 0)
 		{
 		}
-
+		
 		if (ec != SocketError.Success)
 		{
 			//error
@@ -254,7 +254,7 @@ public class ServerSession : IDisposable
 				return;
 			}
 
-			OnPacketRead(buffer);
+			//OnPacketRead(buffer);
 
 			_reader.AdvanceTo(buffer.Start, buffer.End);
 
@@ -310,7 +310,7 @@ public class ServerSession : IDisposable
 			//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
 			var stream = new NetworkStream(_socket);
 			//Reader Writer 셋
-			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: ushort.MaxValue));
+			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
 			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -399,7 +399,7 @@ public class ServerSession : IDisposable
 
 	void OnError(SocketError error)
 	{
-		Console.WriteLine(error.ToString());
+		//Console.WriteLine(error.ToString());
 	}
 
 

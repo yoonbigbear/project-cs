@@ -71,6 +71,6 @@ public class Server : TcpServer
 	public static void ChatCallback(ReadOnlySequence<byte> sequence)
 	{
 		var msg = Chat.Parser.ParseFrom(sequence);
-		Console.WriteLine($"{msg}");
+		//Console.WriteLine($"{msg}");
 	}
 }
