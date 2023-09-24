@@ -12,26 +12,27 @@ namespace Net
 		public Socket _socket;
 
 		// Receives
-		protected PipeReader reader { get; set; }
-		SocketAsyncEventArgs _recvEventArg;
+		protected PipeReader _reader { get; set; }
+		protected SocketAsyncEventArgs _recvEventArg;
 
 		// Send
-		protected PipeWriter writer { get; set; }
-		SocketAsyncEventArgs _sendEventArg;
+		protected PipeWriter _writer { get; set; }
+		protected SocketAsyncEventArgs _sendEventArg;
 
-		protected Server Server { get; private set; }
-		public bool IsSocketDisposed { get; private set; }
-		public bool IsConnected { get; private set; }
-		public int BytesReceived { get; private set; }
-		public bool IsDIsposed { get; private set; }
+		protected TcpServer Server { get; private set; }
+		public bool IsSocketDisposed { get; protected set; }
+		public bool IsConnected { get; protected set; }
+		public int BytesReceived { get; protected set; }
+		public bool IsDIsposed { get; protected set; }
 
-		public TcpSession(Server server) => Server = server;
+		public TcpSession(TcpServer server) => Server = server;
+		public TcpSession() { }
 
 		public void Dispose()
 		{
 			// finalize는 사실상 언제 호출될지 모르므로 대신하는 역할
-			Dispose(true);
-			
+			Dispose(disposing: true);
+
 			// finallize 호출되지 않도록 설정
 			GC.SuppressFinalize(this);
 		}
@@ -61,6 +62,7 @@ namespace Net
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+			//keep alive option?
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
 			IsSocketDisposed = false;
@@ -69,16 +71,14 @@ namespace Net
 			var stream = new NetworkStream(socket);
 
 			//Reader Writer 셋
-			reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
-			writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
+			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
+			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
 			// Send/Recv event 콜백 등록
 			_recvEventArg = new();
 			_recvEventArg.Completed += OnAsyncComplete;
 			_sendEventArg = new();
 			_sendEventArg.Completed += OnAsyncComplete;
-
-			//keep alive option?
 
 			OnConnect();
 
@@ -94,7 +94,7 @@ namespace Net
 			OnConnected();
 		}
 
-		bool Disconnect()
+		protected bool Disconnect()
 		{
 			if (!IsConnected)
 				return false;
@@ -125,8 +125,8 @@ namespace Net
 
 			IsConnected = false;
 
-			reader.CompleteAsync();
-			writer.CompleteAsync();
+			_reader.CompleteAsync();
+			_writer.CompleteAsync();
 
 			OnDisconnected();
 
@@ -204,48 +204,48 @@ namespace Net
 			if (buffer.IsEmpty)
 				return true;
 
-			writer.WriteAsync(buffer.ToArray());
+			_writer.WriteAsync(buffer.ToArray());
 
 			return true;
 		}
 
 		public virtual async void ReceiveAsync()
 		{
-			try
+			while (true)
 			{
-				ReadResult result = await reader.ReadAsync();
-				var buffer = result.Buffer;
+				try
+				{
+					ReadResult result = await _reader.ReadAsync();
+					var buffer = result.Buffer;
 
-				// read 종료.
-				if (buffer.IsEmpty)
+					// read 종료.
+					if (buffer.IsEmpty)
+					{
+						Disconnect();
+						return;
+					}
+
+					var remainData = buffer.Length;
+					if (remainData == 0)
+					{
+						Disconnect();
+						return;
+					}
+
+					OnPacketRead(buffer);
+
+					_reader.AdvanceTo(buffer.Start, buffer.End);
+				}
+				catch
 				{
 					Disconnect();
 					return;
 				}
-
-				var remainData = buffer.Length;
-				if (remainData == 0)
-				{
-					Disconnect();
-					return;
-				}
-
-				//OnPacketRead(buffer);
-
-				reader.AdvanceTo(buffer.Start, buffer.End);
-
-				//다음 패킷 receive
-				ReceiveAsync();
-			}
-			catch
-			{
-				Disconnect();
-				return;
 			}
 
 		}
 
-		bool ProcessReceive(SocketAsyncEventArgs e)
+		protected bool ProcessReceive(SocketAsyncEventArgs e)
 		{
 			if (!IsConnected) return false;
 
@@ -272,7 +272,7 @@ namespace Net
 			return false;
 		}
 
-		bool ProcessSend(SocketAsyncEventArgs e)
+		protected bool ProcessSend(SocketAsyncEventArgs e)
 		{
 			if (!IsConnected)
 				return false;
@@ -294,7 +294,7 @@ namespace Net
 			}
 		}
 
-		void Error(SocketError error)
+		protected void Error(SocketError error)
 		{
 			if ((error == SocketError.ConnectionAborted) ||
 				(error == SocketError.ConnectionRefused) ||

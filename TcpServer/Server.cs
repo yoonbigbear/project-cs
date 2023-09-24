@@ -33,7 +33,7 @@ public class Server : TcpServer
 	//listening 전 서버 시작시 필요한 기본 세팅
 	protected override void OnStart() 
 	{
-		PacketHandler.Handler.Add(PacketId.CHAT, ChatCallback);
+		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 	}
 	// listen 호출 후
 	protected override void OnStarted() { }
@@ -71,6 +71,6 @@ public class Server : TcpServer
 	public static void ChatCallback(ReadOnlySequence<byte> sequence)
 	{
 		var msg = Chat.Parser.ParseFrom(sequence);
-		//Console.WriteLine($"{msg}");
+		Console.WriteLine($"{msg}");
 	}
 }

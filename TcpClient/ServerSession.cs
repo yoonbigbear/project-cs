@@ -1,54 +1,52 @@
-﻿using System.Buffers;
+﻿using Net;
+using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection.PortableExecutable;
 
-public class ServerSession : IDisposable
+public class ServerSession : TcpSession
 {
 	public string Address { get; set; }
 	public int Port { get; set; }
 	public EndPoint EndPoint { get; set; }
 	public PacketHandler PacketHandler { get; set; } = new();
 
-	PipeReader? _reader;
-	PipeWriter? _writer;
 	SocketAsyncEventArgs _connectEventArg;
-	SocketAsyncEventArgs _recvEventArg;
-	SocketAsyncEventArgs _sendEventArg;
-	Socket _socket;
 
-	public bool IsConnected { get; private set; } = false;
-	public bool IsConnecting { get; private set; }
-	public bool IsSocketDisposed { get; private set; }
 	public bool IsDisposed { get; private set; }
+	public bool IsConnecting { get; protected set; }
 
 	protected virtual Socket CreateSocket() { return new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); }
 
-	public ServerSession(EndPoint endPoint, string address, int port)
+	public ServerSession(EndPoint endPoint, string address, int port) : base()
 	{
 		EndPoint = endPoint;
 		Address = address;
 		Port = port;
+		_connectEventArg = new();
 	}
 
-	public virtual bool Connect()
+	public bool ConnectAsync()
 	{
 		if (IsConnected || IsConnecting)
 		{
 			return false;
 		}
 
-		_connectEventArg = new();
 		_connectEventArg.RemoteEndPoint = EndPoint;
 		_connectEventArg.Completed += OnAsyncComplete;
 		_recvEventArg = new();
 		_recvEventArg.Completed += OnAsyncComplete;
 		_sendEventArg = new();
 		_sendEventArg.Completed += OnAsyncComplete;
+
 		_socket = CreateSocket();
 
-
 		IsSocketDisposed = false;
+
+		IsConnecting = true;
 
 		try
 		{
@@ -56,7 +54,7 @@ public class ServerSession : IDisposable
 			_socket.Connect(EndPoint);
 			ProcessConnect(_connectEventArg);
 		}
-		catch (SocketException e) 
+		catch (SocketException e)
 		{
 			_connectEventArg.Completed -= OnAsyncComplete;
 			_recvEventArg.Completed -= OnAsyncComplete;
@@ -75,201 +73,15 @@ public class ServerSession : IDisposable
 
 		}
 
-		IsConnected = true;
-
 		return true;
 	}
 
-	public virtual bool Disconnect()
-	{
-		if (!IsConnected && !IsConnecting)
-		{
-			return false;
-		}
+	public void DisconnectAsync() => Disconnect();
 
-		if (IsConnecting)
-		{
-			Socket.CancelConnectAsync(_connectEventArg);
-		}
-
-		_reader?.Complete();
-		_writer?.Complete();
-
-		_connectEventArg.Completed -= OnAsyncComplete;
-		_recvEventArg.Completed -= OnAsyncComplete;
-		_sendEventArg.Completed -= OnAsyncComplete;
-
-		try
-		{
-			try
-			{
-				_socket?.Shutdown(SocketShutdown.Both);
-			}
-			catch (SocketException) { }
-
-			_socket?.Close();
-
-			_socket.Dispose();
-
-			_connectEventArg.Dispose();
-			_recvEventArg.Dispose();
-			_sendEventArg.Dispose();
-
-			IsSocketDisposed = true;
-		}
-		catch(ObjectDisposedException ex)
-		{
-			Console.WriteLine($"Failed to receive message {ex.Message}");
-			throw ex;
-		}
-
-		IsConnected = false;
-
-		return true;
-	}
-
-	public virtual bool Reconnect()
-	{
-		if (!Disconnect())
-			return false;
-
-		return Connect();
-	}
-
-	public virtual bool ConnectAsync()
-	{
-		if (IsConnected || IsConnecting)
-		{
-			return false;
-		}
-
-		_connectEventArg = new();
-		_connectEventArg.RemoteEndPoint = EndPoint;
-		_connectEventArg.Completed += OnAsyncComplete;
-		_recvEventArg = new();
-		_recvEventArg.Completed += OnAsyncComplete;
-		_sendEventArg = new();
-		_sendEventArg.Completed += OnAsyncComplete;
-
-		_socket = CreateSocket();
-
-		IsSocketDisposed = false;
-
-		IsConnecting = true;
-
-		if (!_socket.ConnectAsync(_connectEventArg))
-			ProcessConnect(_connectEventArg);
-
-		return true;
-	}
-
-	public virtual void DisconnectAsync() => Disconnect();
-
-	public virtual bool ReconnectAsync()
+	public bool ReconnectAsync()
 	{
 		Disconnect();
 		return ConnectAsync();
-	}
-
-	public virtual long Send(ReadOnlySpan<byte> buffer)
-	{
-		if (!IsConnected)
-			return 0;
-
-		if (buffer.IsEmpty)
-			return 0;
-
-		long sent = _socket.Send(buffer, SocketFlags.None, out SocketError ec);
-		if (sent > 0)
-		{
-		}
-		
-		if (ec != SocketError.Success)
-		{
-			//error
-			Error(ec);
-			Disconnect();
-		}
-
-		return sent;
-	}
-
-	public virtual bool SendAsync(ReadOnlyMemory<byte> buffer)
-	{
-		if (!IsConnected)
-			return false;
-
-		if (buffer.IsEmpty)
-			return false;
-
-		_writer?.WriteAsync(buffer);
-			
-		return true;
-	}
-
-	public virtual long Receive(byte[] buffer, long offset, long size)
-	{
-		if (!IsConnected)
-			return 0;
-
-		if (size == 0)
-			return 0;
-
-		long recevied = _socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-		if (recevied > 0)
-		{
-
-		}
-
-		if (ec != SocketError.Success)
-		{
-			//error
-			Error(ec);
-			Disconnect();
-		}
-
-		return recevied;
-	}
-
-	public virtual async void ReceiveAsync()
-	{
-		if (!IsConnected)
-			return;
-
-		try
-		{
-			ReadResult result = await _reader.ReadAsync();
-			var buffer = result.Buffer;
-
-			if (buffer.IsEmpty)
-			{
-				Disconnect();
-				return;
-			}
-
-			var remainingData = buffer.Length;
-			if (remainingData == 0) 
-			{
-				Disconnect();
-				return;
-			}
-
-			//OnPacketRead(buffer);
-
-			_reader.AdvanceTo(buffer.Start, buffer.End);
-
-			ReceiveAsync();
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine($"Failed to receive message {ex.Message}");
-			Disconnect();
-		}
-	}
-
-	protected virtual void OnPacketRead(ReadOnlySequence<byte> buf)
-	{
-		PacketHandler.Push(buf);
 	}
 
 	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)
@@ -309,10 +121,11 @@ public class ServerSession : IDisposable
 
 			//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
 			var stream = new NetworkStream(_socket);
+
 			//Reader Writer 셋
 			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
 			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
-
+			
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
@@ -335,76 +148,8 @@ public class ServerSession : IDisposable
 		}
 	}
 
-	bool ProcessReceive(SocketAsyncEventArgs e)
-	{
-		if (!IsConnected)
-			return false;
-
-		long size = e.BytesTransferred;
-
-		if (size > 0)
-		{
-
-		}
-
-		if (e.SocketError == SocketError.Success)
-		{
-			if (size > 0)
-				return true;
-			else
-				DisconnectAsync();
-		}
-		else
-		{
-			//Error
-			Error(e.SocketError);
-			DisconnectAsync();
-		}
-
-		return false;
-	}
-
-	bool ProcessSend(SocketAsyncEventArgs e)
-	{
-		if (!IsConnected)
-			return false;
-
-		long size = e.BytesTransferred;
-
-		if (size > 0)
-		{
-
-		}
-
-		if (e.SocketError == SocketError.Success)
-			return true;
-		else
-		{
-			Error(e.SocketError);
-			DisconnectAsync();
-			return false;
-		}
-	}
-
-	void Error(SocketError error)
-	{
-		if ((error == SocketError.ConnectionAborted) ||
-			(error == SocketError.ConnectionRefused) ||
-			(error == SocketError.ConnectionReset) ||
-			(error == SocketError.Shutdown))
-			return;
-
-		OnError(error);
-	}
-
-	void OnError(SocketError error)
-	{
-		//Console.WriteLine(error.ToString());
-	}
-
-
 	#region Dispose
-	protected virtual void Dispose(bool disposing)
+	protected override void Dispose(bool disposing)
 	{
 		if (!IsDisposed)
 		{
@@ -426,12 +171,5 @@ public class ServerSession : IDisposable
 	//     // 이 코드를 변경하지 마세요. 'Dispose(bool disposing)' 메서드에 정리 코드를 입력합니다.
 	//     Dispose(disposing: false);
 	// }
-
-	public void Dispose()
-	{
-		// 이 코드를 변경하지 마세요. 'Dispose(bool disposing)' 메서드에 정리 코드를 입력합니다.
-		Dispose(disposing: true);
-		GC.SuppressFinalize(this);
-	}
 	#endregion
 }

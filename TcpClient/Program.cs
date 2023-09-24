@@ -5,6 +5,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Principal;
+using Net;
+
+public partial class Chat
+{
+}
 
 public class Program
 {
@@ -15,13 +20,13 @@ public class Program
 		HashSet<ServerSession> sessions = new(); ;
 
 		//패킷 핸들러 등록
-		PacketHandler.Handler.Add(PacketId.CHAT, ChatCallback);
+		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 
-		for (int i = 0; i < 10000; ++i)
+		for (int i = 0; i < 5000; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerSession server = new ServerSession(ep, address, port);
-			if (server.Connect())
+			if (server.ConnectAsync())
 				sessions.Add(server);
 
 		}
@@ -41,14 +46,15 @@ public class Program
 			foreach (var e in sessions)
 			{
 				{
-					e.PacketHandler.Serialize(PacketId.CHAT, bytes, e);
-					//e.Send(buf);
+					e.PacketHandler.Serialize((ushort)PacketId.CHAT, bytes, e);
 				}
-				var pkt = e.PacketHandler.Pop();
-				//if (pkt.HasValue)
-				//{
-				//	e.PacketHandler.Deserialize(pkt.Value);
-				//}
+				{
+					var pkt = e.PacketHandler.Pop();
+					if (pkt.HasValue)
+					{
+						e.PacketHandler.Deserialize(pkt.Value);
+					}
+				}
 			}
 		}
 
