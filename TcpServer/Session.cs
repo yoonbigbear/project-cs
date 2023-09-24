@@ -4,7 +4,8 @@ using System.Net.Sockets;
 
 public class Session : TcpSession
 {
-	public Session(Server server) : base(server) { }
+	Server _server;
+	public Session(Server server) : base(server) { _server = server; }
 
 	protected override void OnError(SocketError er) { }
 	// 소켓 생override킷 recv/send 시작하기 전
@@ -17,7 +18,7 @@ public class Session : TcpSession
 	protected override void OnDisconnected() { }
 	protected override void OnPacketRead(ReadOnlySequence<byte> reads)
 	{
-		Console.WriteLine($"received client packet t:{Thread.CurrentThread.ManagedThreadId}");
-		Server.PacketHandler.Push(reads);
+		//Console.WriteLine($"received client packet t:{Thread.CurrentThread.ManagedThreadId}");
+		_server.PacketHandler.Push(reads);
 	}
 }

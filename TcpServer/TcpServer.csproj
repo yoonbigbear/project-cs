@@ -14,6 +14,10 @@
     <PackageReference Include="System.IO.Pipelines" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="copy &quot;$(SolutionDir)Protocol/gen&quot; &quot;gen/&quot;" />
   </Target>
