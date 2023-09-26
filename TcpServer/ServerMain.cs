@@ -1,12 +1,10 @@
-﻿
-using System.Buffers;
-using System.Diagnostics;
+﻿using NetCore;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Sockets;
-using Net;
+using System.Text;
 
-internal class Program
+internal class ServerMain
 {
 	static void Main(string[] args)
 	{
@@ -19,11 +17,10 @@ internal class Program
 
 		while (true)
 		{
-			var pkt = server.PacketHandler.Pop();
-			if (pkt.HasValue)
+			var buffers = server.PacketHandler.Pop();
+			foreach (var e in buffers)
 			{
-				server.PacketHandler.Deserialize(pkt.Value);
-				server.Broadcast(pkt.Value.FirstSpan);
+				server.PacketHandler.Deserialize(e);
 			}
 		}
 

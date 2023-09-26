@@ -1,15 +1,10 @@
-﻿using Net;
-using System;
-using System.Buffers;
+﻿using NetCore;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection.PortableExecutable;
 
 public class ServerSession : TcpSession
 {
-	public string Address { get; set; }
-	public int Port { get; set; }
 	public EndPoint EndPoint { get; set; }
 	public PacketHandler PacketHandler { get; set; } = new();
 
@@ -20,27 +15,18 @@ public class ServerSession : TcpSession
 
 	protected virtual Socket CreateSocket() { return new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); }
 
-	public ServerSession(EndPoint endPoint, string address, int port) : base()
+	public ServerSession(EndPoint endPoint) : base()
 	{
 		EndPoint = endPoint;
-		Address = address;
-		Port = port;
 		_connectEventArg = new();
 	}
 
-	public bool ConnectAsync()
+	public async void ConnectAsync()
 	{
 		if (IsConnected || IsConnecting)
 		{
-			return false;
+			return;
 		}
-
-		_connectEventArg.RemoteEndPoint = EndPoint;
-		_connectEventArg.Completed += OnAsyncComplete;
-		_recvEventArg = new();
-		_recvEventArg.Completed += OnAsyncComplete;
-		_sendEventArg = new();
-		_sendEventArg.Completed += OnAsyncComplete;
 
 		_socket = CreateSocket();
 
@@ -51,103 +37,60 @@ public class ServerSession : TcpSession
 		try
 		{
 			//서버에 연결.
-			_socket.Connect(EndPoint);
-			ProcessConnect(_connectEventArg);
+			await _socket.ConnectAsync(EndPoint);
+
+			if (_socket.Connected)
+			{
+				Console.WriteLine("Connect with server...");
+
+				//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
+				var stream = new NetworkStream(_socket);
+
+				//Reader Writer 셋
+				_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
+				_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
+
+				_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+				_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
+				_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+				_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+				IsConnected = true;
+
+				//Receive
+				ReceiveAsync();
+
+
+				if (IsSocketDisposed)
+					return;
+
+			}
+			else
+			{
+				//error
+				Error(SocketError.NotConnected);
+			}
 		}
 		catch (SocketException e)
 		{
-			_connectEventArg.Completed -= OnAsyncComplete;
-			_recvEventArg.Completed -= OnAsyncComplete;
-			_sendEventArg.Completed -= OnAsyncComplete;
-
 			_socket.Close();
 
 			_socket.Dispose();
 
 			_connectEventArg.Dispose();
-			_recvEventArg.Dispose();
-			_sendEventArg.Dispose();
 
 			//error
 			Error(e.SocketErrorCode);
 
-		}
-
-		return true;
-	}
-
-	public void DisconnectAsync() => Disconnect();
-
-	public bool ReconnectAsync()
-	{
-		Disconnect();
-		return ConnectAsync();
-	}
-
-	void OnAsyncComplete(object? sender, SocketAsyncEventArgs e)
-	{
-		if (IsSocketDisposed)
 			return;
-
-		switch (e.LastOperation)
-		{
-			case SocketAsyncOperation.Connect:
-				ProcessConnect(e);
-				break;
-			case SocketAsyncOperation.Receive:
-				if (ProcessReceive(e))
-				{
-
-				}
-				break;
-			case SocketAsyncOperation.Send:
-				if (ProcessSend(e))
-				{
-
-				}
-				break;
-			default:
-				throw new ArgumentException("");
 		}
+		return;
 	}
 
-	void ProcessConnect(SocketAsyncEventArgs e)
+	protected override void OnDisconnected()
 	{
-		IsConnected	= true;
-
-		if (e.SocketError == SocketError.Success)
-		{
-			Console.WriteLine("Connected to server...");
-
-			//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
-			var stream = new NetworkStream(_socket);
-
-			//Reader Writer 셋
-			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
-			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
-			
-			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
-			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
-			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-
-			IsConnected = true;
-
-			//Receive
-			ReceiveAsync();
-
-
-			if (IsSocketDisposed)
-				return;
-
-		}
-		else
-		{
-			//error
-			Error(e.SocketError);
-		}
+		Console.WriteLine($"Disconnected... ");
 	}
-
 	#region Dispose
 	protected override void Dispose(bool disposing)
 	{
@@ -156,7 +99,7 @@ public class ServerSession : TcpSession
 			if (disposing)
 			{
 				// TODO: 관리형 상태(관리형 개체)를 삭제합니다.
-				DisconnectAsync();
+				Disconnect();
 			}
 
 			// TODO: 비관리형 리소스(비관리형 개체)를 해제하고 종료자를 재정의합니다.

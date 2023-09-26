@@ -1,8 +1,56 @@
-﻿using Net;
+﻿using NetCore;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Data.SqlTypes;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
+
+public class SparseList<T>
+	where T : class
+{
+	public List<T> items { get; private set; } = new();
+	Queue<int> emptylist = new();
+
+	public int Add(T item)
+	{
+		if (emptylist.Count > 0)
+		{
+			int idx = emptylist.Dequeue();
+			items[idx] = item;
+			return idx;
+		}
+		else
+		{
+			items.Add(item);
+			return items.Count - 1;
+		}
+	}
+
+	public void Remove(int idx)
+	{
+		emptylist.Enqueue(idx);
+		items[idx] = null;
+	}
+}
+
+public class SessionList
+{
+	public ConcurrentBag<TcpSession> sessions { get; private set; } = new();
+
+	public int Add(TcpSession item)
+	{
+		sessions.Add(item);
+		return sessions.Count - 1;
+	}
+
+	public void Remove(int idx)
+	{
+		var last = sessions.Last();
+	}
+}
 
 public class Server : TcpServer
 {
@@ -10,39 +58,50 @@ public class Server : TcpServer
 
 	static int sessionid;
 
-	protected Dictionary<int, TcpSession> _tcpSessions { get; set; } = new();
+	object _lock = new();
+
+	//protected ConcurrentDictionary<int, TcpSession> _tcpSessions { get; set; } = new();
+	protected SparseList<TcpSession> _tcpSessions { get; set; } = new();
+
 	public PacketHandler PacketHandler { get; set; } = new PacketHandler();
 
 	Session CreateSession() => new(this);
 
 	public int RegisterSession(TcpSession session)
 	{
-		_tcpSessions.Add(++sessionid, session);
-		return sessionid;
+		//_tcpSessions.TryAdd(++sessionid, session);
+		lock (_lock)
+		{
+			return _tcpSessions.Add(session); ;
+		}
+		//return sessionid;
 	}
 	public void UnregisterSession(int sessionId) => _tcpSessions.Remove(sessionid);
-	public TcpSession FindSession(int index) => _tcpSessions[index];
+	public TcpSession FindSession(int index) => _tcpSessions.items[index];
 	public void Broadcast(ReadOnlySpan<byte> bytes)
 	{
-		foreach (var item in _tcpSessions.Values)
+		foreach (var item in _tcpSessions.items)
 		{
-			item.Send(bytes);
+			if (item != null)
+			{
+				item.Send(bytes);
+			}
 		}
 	}
 
 	//listening 전 서버 시작시 필요한 기본 세팅
-	protected override void OnStart() 
+	protected override void OnStart()
 	{
 		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 	}
 	// listen 호출 후
 	protected override void OnStarted() { }
 	// accept 막기 전
-	protected override void OnStop() 
+	protected override void OnStop()
 	{
 		Console.WriteLine("On Stop");
 
-		foreach (var item in _tcpSessions.Values)
+		foreach (var item in _tcpSessions.items)
 		{
 			item.Dispose();
 		}
@@ -67,10 +126,9 @@ public class Server : TcpServer
 	protected override void OnDisconnect() { }
 	protected override void OnDisconnected() { }
 
-
 	public static void ChatCallback(ReadOnlySequence<byte> sequence)
 	{
 		var msg = Chat.Parser.ParseFrom(sequence);
-		Console.WriteLine($"{msg}");
+		//Console.WriteLine($"{msg}");
 	}
 }

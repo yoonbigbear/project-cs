@@ -2,30 +2,41 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 public enum PacketId : ushort
 {
 	CHAT = 21000,
 }
 
-namespace Net
+namespace NetCore
 {
 	public class PacketHandler
 	{
-		public ConcurrentQueue<ReadOnlySequence<byte>> packetBuffers { get; set; } = new ConcurrentQueue<ReadOnlySequence<byte>>();
+		object _lock = new();
+
+		List<ReadOnlySequence<byte>> backPacketBuffers { get; set; } = new();
+		List<ReadOnlySequence<byte>> frontPacketBuffers { get; set; } = new();
 
 		public static Dictionary<ushort, Action<ReadOnlySequence<byte>>> Handler { get; set; } = new();
 
 		public void Push(ReadOnlySequence<byte> packet)
 		{
-			packetBuffers.Enqueue(packet);
+            lock (_lock)
+            {
+				backPacketBuffers.Add(packet);
+            }
 		}
 
-		public Nullable<ReadOnlySequence<byte>> Pop()
+		public List<ReadOnlySequence<byte>> Pop()
 		{
-			if (packetBuffers.TryDequeue(out var packet))
-				return packet;
-			return null;
+			lock (_lock)
+			{
+				frontPacketBuffers.Clear();
+				frontPacketBuffers.AddRange(backPacketBuffers);
+				backPacketBuffers.Clear();
+			}
+			return frontPacketBuffers;
 		}
 
 		public void Deserialize(ReadOnlySequence<byte> packet)
