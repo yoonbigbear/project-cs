@@ -1,6 +1,8 @@
-﻿namespace Profiler
+﻿using System.Diagnostics;
+
+namespace NetCore
 {
-	class GCTracer
+	public class GCTracer
 	{
 		static long before = 0;
 		static long after = 0;
@@ -16,6 +18,22 @@
 			Console.WriteLine($"GC heap alloc :{after - before}");
 			GC.Collect();
 			Thread.Sleep(1000);
+		}
+	}
+
+	public class ElapsedTimer
+	{
+		static Stopwatch _start = new();
+
+		public static void Start()
+		{
+			_start.Reset();
+			_start.Start();
+		}
+		public static void End()
+		{
+			_start.Stop();
+			Console.WriteLine($"Elapsed ms... {_start.ElapsedMilliseconds}");
 		}
 	}
 }

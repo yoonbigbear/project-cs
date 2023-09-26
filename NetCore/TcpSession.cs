@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Reflection.PortableExecutable;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace Net
+namespace NetCore
 {
 	public class TcpSession : IDisposable
 	{
@@ -13,20 +13,17 @@ namespace Net
 
 		// Receives
 		protected PipeReader _reader { get; set; }
-		protected SocketAsyncEventArgs _recvEventArg;
-
-		// Send
 		protected PipeWriter _writer { get; set; }
-		protected SocketAsyncEventArgs _sendEventArg;
-
 		protected TcpServer Server { get; private set; }
 		public bool IsSocketDisposed { get; protected set; }
 		public bool IsConnected { get; protected set; }
 		public int BytesReceived { get; protected set; }
 		public bool IsDIsposed { get; protected set; }
 
+#pragma warning disable 8618
 		public TcpSession(TcpServer server) => Server = server;
 		public TcpSession() { }
+#pragma warning restore 8618
 
 		public void Dispose()
 		{
@@ -63,7 +60,7 @@ namespace Net
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
 			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
 			//keep alive option?
-			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+			_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
 
 			IsSocketDisposed = false;
 
@@ -73,12 +70,6 @@ namespace Net
 			//Reader Writer 셋
 			_reader = PipeReader.Create(stream, new StreamPipeReaderOptions(bufferSize: 1470));
 			_writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
-
-			// Send/Recv event 콜백 등록
-			_recvEventArg = new();
-			_recvEventArg.Completed += OnAsyncComplete;
-			_sendEventArg = new();
-			_sendEventArg.Completed += OnAsyncComplete;
 
 			OnConnect();
 
@@ -99,10 +90,6 @@ namespace Net
 			if (!IsConnected)
 				return false;
 
-
-			_recvEventArg.Completed -= OnAsyncComplete;
-			_sendEventArg.Completed -= OnAsyncComplete;
-
 			OnDisconnect();
 
 			try
@@ -113,11 +100,11 @@ namespace Net
 					_socket.Shutdown(SocketShutdown.Both);
 				}
 				catch (SocketException) { }
-
-				_socket.Close();
-				_socket.Dispose();
-				_recvEventArg.Dispose();
-				_sendEventArg.Dispose();
+				finally
+				{
+					_socket.Close();
+					_socket.Dispose();
+				}
 
 				IsSocketDisposed = true;
 			}
@@ -133,39 +120,28 @@ namespace Net
 			return true;
 		}
 
-		void OnAsyncComplete(object sender, SocketAsyncEventArgs args)
+		public virtual bool SendAsync(byte[] buffer)
 		{
-			if (IsSocketDisposed)
-				return;
+			if (!IsConnected)
+				return false;
 
-			switch(args.LastOperation)
-			{
-				case SocketAsyncOperation.Receive:
-					if (ProcessReceive(args))
-					{
+			if (buffer.Length == 0)
+				return true;
 
-					}
-					break;
-				case SocketAsyncOperation.Send:
-					if (ProcessSend(args))
-					{
+			_writer.WriteAsync(buffer);
 
-					}
-					break;
-				default:
-					throw new ArgumentException("");
-			}
+			return true;
 		}
 
 		public virtual Int64 Send(ReadOnlySpan<byte> buffer)
 		{
 			if (!IsConnected) return 0;
 			if (buffer.IsEmpty) return 0;
-			
+
 			var sent = _socket.Send(buffer, SocketFlags.None, out SocketError ec);
-			if (sent> 0)
+			if (sent > 0)
 			{
-				
+
 			}
 
 			if (ec != SocketError.Success)
@@ -177,121 +153,35 @@ namespace Net
 			return sent;
 		}
 
-		public virtual Int64 Receive(byte[] buffer, long offset, long size)
-		{
-			if (!IsConnected) return 0;
-			if (size == 0) return 0;
-
-			var received = _socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-			if (received > 0)
-			{
-				//receive handler
-			}
-			if (ec != SocketError.Success)
-			{
-				Error(ec);
-				Disconnect();
-			}
-
-			return received;
-		}
-
-		public virtual bool SendAsync(ReadOnlySpan<byte> buffer)
-		{
-			if (!IsConnected)
-				return false;
-
-			if (buffer.IsEmpty)
-				return true;
-
-			_writer.WriteAsync(buffer.ToArray());
-
-			return true;
-		}
-
 		public virtual async void ReceiveAsync()
 		{
-			while (true)
+			try
 			{
-				try
+				while (true)
 				{
 					ReadResult result = await _reader.ReadAsync();
 					var buffer = result.Buffer;
 
-					// read 종료.
+					//Socket 종료 이벤트 감지
+					if (result.IsCompleted)
+						break;
+
 					if (buffer.IsEmpty)
-					{
-						Disconnect();
-						return;
-					}
+						break;
 
 					var remainData = buffer.Length;
 					if (remainData == 0)
-					{
-						Disconnect();
-						return;
-					}
+						break;
 
 					OnPacketRead(buffer);
 
 					_reader.AdvanceTo(buffer.Start, buffer.End);
 				}
-				catch
-				{
-					Disconnect();
-					return;
-				}
 			}
-
-		}
-
-		protected bool ProcessReceive(SocketAsyncEventArgs e)
-		{
-			if (!IsConnected) return false;
-
-			var size = e.BytesTransferred;
-
-			if (size > 0)
+			catch
 			{
-				BytesReceived += size;
 			}
-
-			if (e.SocketError == SocketError.Success)
-			{
-				if (size > 0)
-					return true;
-				else
-					Disconnect();
-			}
-			else
-			{
-				//Error
-				Error(e.SocketError);
-				Disconnect();
-			}
-			return false;
-		}
-
-		protected bool ProcessSend(SocketAsyncEventArgs e)
-		{
-			if (!IsConnected)
-				return false;
-
-			var size = e.BytesTransferred;
-			if (size > 0)
-			{ 
-				//OnSent
-			}
-
-			if (e.SocketError == SocketError.Success)
-				return true;
-			else
-			{
-				//error
-				Error(e.SocketError);
-				Disconnect();
-				return false;
-			}
+			Disconnect();
 		}
 
 		protected void Error(SocketError error)

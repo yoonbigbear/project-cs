@@ -1,4 +1,4 @@
-﻿using Net;
+﻿using NetCore;
 using System.Buffers;
 using System.Net.Sockets;
 
@@ -15,7 +15,7 @@ public class Session : TcpSession
 	// 소켓 콜override후 스트림 종료 전
 	protected override void OnDisconnect() { }
 	// 스트림 override
-	protected override void OnDisconnected() { }
+	protected override void OnDisconnected() { Console.WriteLine($"Disconnected... "); }
 	protected override void OnPacketRead(ReadOnlySequence<byte> reads)
 	{
 		//Console.WriteLine($"received client packet t:{Thread.CurrentThread.ManagedThreadId}");

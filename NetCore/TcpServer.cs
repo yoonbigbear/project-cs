@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks.Dataflow;
 
-namespace Net
+namespace NetCore
 {
 	public class TcpServer : IDisposable
 	{
@@ -23,7 +23,9 @@ namespace Net
 		public bool IsStarted { get; private set; }
 		public bool IsDisposed { get; private set; }
 
+#pragma warning disable 8618
 		public TcpServer(EndPoint endPoint) => _endPoint = endPoint;
+#pragma warning restore 8618
 		Socket CreateSocket() => new Socket(_endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
 		public bool Start()
