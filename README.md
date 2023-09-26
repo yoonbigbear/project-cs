@@ -23,3 +23,4 @@
 - [ ] unit test
 - [ ] packet size optimize
 - [x] Git Action Workflow 구성
+- [ ] DB로그나 서버 db작업을 로그로 우선 남긴 후 처리되지 않은 상태에서 서버가 떨어지거나 했을 경우 자동으로 복구를 진행하도록 하는 기능 개발
