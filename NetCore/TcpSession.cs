@@ -129,7 +129,7 @@ namespace NetCore
 				return true;
 
 			_writer.WriteAsync(buffer);
-
+			
 			return true;
 		}
 
