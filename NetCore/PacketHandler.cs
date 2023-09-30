@@ -15,8 +15,8 @@ namespace NetCore
 	{
 		object _lock = new();
 
-		List<ReadOnlySequence<byte>> backPacketBuffers { get; set; } = new();
-		List<ReadOnlySequence<byte>> frontPacketBuffers { get; set; } = new();
+		List<ReadOnlySequence<byte>> _backBuffer { get; set; } = new();
+		List<ReadOnlySequence<byte>> _frontBuffer { get; set; } = new();
 
 		public static Dictionary<ushort, Action<ReadOnlySequence<byte>>> Handler { get; set; } = new();
 
@@ -24,7 +24,7 @@ namespace NetCore
 		{
             lock (_lock)
             {
-				backPacketBuffers.Add(packet);
+				_backBuffer.Add(packet);
             }
 		}
 
@@ -32,11 +32,11 @@ namespace NetCore
 		{
 			lock (_lock)
 			{
-				frontPacketBuffers.Clear();
-				frontPacketBuffers.AddRange(backPacketBuffers);
-				backPacketBuffers.Clear();
+				_frontBuffer.Clear();
+				_frontBuffer.AddRange(_backBuffer);
+				_backBuffer.Clear();
 			}
-			return frontPacketBuffers;
+			return _frontBuffer;
 		}
 
 		public void Deserialize(ReadOnlySequence<byte> packet)
