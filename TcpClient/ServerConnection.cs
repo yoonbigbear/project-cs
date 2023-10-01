@@ -1,9 +1,11 @@
-﻿using NetCore;
+﻿using Google.Protobuf;
+using NetCore;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 
-public class ServerSession : TcpSession
+public class ServerConnection : TcpSession
 {
 	public EndPoint EndPoint { get; set; }
 	public PacketHandler PacketHandler { get; set; } = new();
@@ -15,7 +17,7 @@ public class ServerSession : TcpSession
 
 	protected virtual Socket CreateSocket() { return new Socket(EndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp); }
 
-	public ServerSession(EndPoint endPoint) : base()
+	public ServerConnection(EndPoint endPoint) : base()
 	{
 		EndPoint = endPoint;
 		_connectEventArg = new();
@@ -41,7 +43,7 @@ public class ServerSession : TcpSession
 
 			if (_socket.Connected)
 			{
-				Console.WriteLine("Connect with server...");
+				//Console.WriteLine("Connect with server...");
 
 				//NetworkStream을 이용한 Tcp소켓 프로그래밍. 
 				var stream = new NetworkStream(_socket);
@@ -60,6 +62,11 @@ public class ServerSession : TcpSession
 				//Receive
 				ReceiveAsync();
 
+				CreateAccountREQ req = new CreateAccountREQ
+				{
+					Name = $"클라이언트 {GetHashCode()}",
+				};
+				Serialize((ushort)PacketId.CREATEACCOUNTREQ, req.ToByteArray());
 
 				if (IsSocketDisposed)
 					return;
@@ -87,10 +94,30 @@ public class ServerSession : TcpSession
 		return;
 	}
 
+	public void Serialize(ushort id, byte[] bytes)
+	{
+		Span<byte> buf = stackalloc byte[4 + bytes.Length];
+
+		buf[0] = (byte)(((ushort)id) & 0x00FF);
+		buf[1] = (byte)((((ushort)id) & 0xFF00) >> 8);
+		buf[2] = (byte)(((ushort)bytes.Length) & 0x00FF);
+		buf[3] = (byte)((((ushort)bytes.Length) & 0xFF00) >> 8);
+		bytes.CopyTo(buf.Slice(4));
+
+		Send(buf);
+	}
+
+	protected override void OnPacketRead(ReadOnlySequence<byte> buf) 
+	{
+		PacketHandler.Push(this, buf);
+	}
+
 	protected override void OnDisconnected()
 	{
 		Console.WriteLine($"Disconnected... ");
 	}
+
+
 	#region Dispose
 	protected override void Dispose(bool disposing)
 	{

@@ -3,3 +3,12 @@ syntax = "proto3";
 message Chat {
   string message = 1;
 }
+
+message CreateAccountREQ {
+	string name = 1;
+}
+
+message CreateAccountACK {
+	int32 result = 1;
+	int32 acct_id = 2;
+}

@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 public enum PacketId : ushort
 {
 	CHAT = 21000,
+	CREATEACCOUNTREQ = 3000,
+	CREATEACCOUNTACK= 3001,
 }
 
 namespace NetCore
@@ -15,20 +17,20 @@ namespace NetCore
 	{
 		object _lock = new();
 
-		List<ReadOnlySequence<byte>> _backBuffer { get; set; } = new();
-		List<ReadOnlySequence<byte>> _frontBuffer { get; set; } = new();
+		List<(TcpSession, ReadOnlySequence<byte>)> _backBuffer { get; set; } = new();
+		List<(TcpSession, ReadOnlySequence<byte>)> _frontBuffer { get; set; } = new();
 
-		public static Dictionary<ushort, Action<ReadOnlySequence<byte>>> Handler { get; set; } = new();
+		public static Dictionary<ushort, Action<TcpSession, ReadOnlySequence<byte>>> Handler { get; set; } = new();
 
-		public void Push(ReadOnlySequence<byte> packet)
+		public void Push(TcpSession session, ReadOnlySequence<byte> packet)
 		{
             lock (_lock)
             {
-				_backBuffer.Add(packet);
+				_backBuffer.Add((session, packet));
             }
 		}
 
-		public List<ReadOnlySequence<byte>> Pop()
+		public List<(TcpSession, ReadOnlySequence<byte>)> Pop()
 		{
 			lock (_lock)
 			{
@@ -39,7 +41,7 @@ namespace NetCore
 			return _frontBuffer;
 		}
 
-		public void Deserialize(ReadOnlySequence<byte> packet)
+		public void Deserialize(TcpSession session, ReadOnlySequence<byte> packet)
 		{
 			var id = BitConverter.ToUInt16(packet.FirstSpan.Slice(0, 2/*id*/));
 			var size = BitConverter.ToUInt16(packet.FirstSpan.Slice(2, 2/*size*/));
@@ -48,26 +50,13 @@ namespace NetCore
 			//원래는 여기서 실행 안함
 			try
 			{
-				Handler[id].Invoke(body);
+				Handler[id].Invoke(session, body);
 			}
 			catch (Exception e)
 			{
 				Console.WriteLine(e.ToString());
 			}
 
-		}
-
-		public void Serialize(ushort id, byte[] bytes, TcpSession e)
-		{
-			Span<byte> buf = stackalloc byte[4 + bytes.Length];
-
-			buf[0] = (byte)(((ushort)id) & 0x00FF);
-			buf[1] = (byte)((((ushort)id) & 0xFF00) >> 8);
-			buf[2] = (byte)(((ushort)bytes.Length) & 0x00FF);
-			buf[3] = (byte)((((ushort)bytes.Length) & 0xFF00) >> 8);
-			bytes.CopyTo(buf.Slice(4));
-
-			e.Send(buf);
 		}
 	}
 }

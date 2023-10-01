@@ -14,7 +14,7 @@ namespace NetCore
 		// Receives
 		protected PipeReader _reader { get; set; }
 		protected PipeWriter _writer { get; set; }
-		protected TcpServer Server { get; private set; }
+		public TcpServer Server { get; private set; }
 		public bool IsSocketDisposed { get; protected set; }
 		public bool IsConnected { get; protected set; }
 		public int BytesReceived { get; protected set; }

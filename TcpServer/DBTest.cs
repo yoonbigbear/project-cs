@@ -1,4 +1,5 @@
 ﻿using MySqlConnector;
+using NetCore;
 
 public class DBTest
 {
@@ -24,7 +25,9 @@ public class DBTest
 
 			cmd.CommandText = @"CREATE TABLE account (
 							id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-							name VARCHAR(20))";
+							name VARCHAR(20) NOT NULL,
+							register_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+							CREATE index idx_account_name on account(name);";
 			await cmd.ExecuteNonQueryAsync();
 
 			cmd.CommandText = @"
@@ -35,14 +38,17 @@ IN in_name VARCHAR(20), OUT out_id INT
 BEGIN
 IF NOT EXISTS (SELECT 1 FROM account WHERE account.name = in_name) THEN
 	INSERT INTO account(account.name) VALUE(in_name);
+	SET out_id = LAST_INSERT_ID();
 END IF;
 END";
 			await cmd.ExecuteNonQueryAsync();
 		}
 	}
 
-	public static async void CallSP(string name)
+	public static async Task<int> CreateAccount(string name)
 	{
+		//Console.WriteLine($"Request Create Account {name}");
+
 		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
 			Username=root; Password=admin;
 			Database=account");
@@ -61,7 +67,14 @@ END";
 			cmd.Parameters["out_id"].Direction = System.Data.ParameterDirection.Output;
 
 			var result = await cmd.ExecuteNonQueryAsync();
-			var id = ((int)result);
+			if (result == 1)
+			{
+				return (int)cmd.Parameters["out_id"].Value;
+			}
+			else
+			{
+				return -1;
+			}
 		}
 	}
 
