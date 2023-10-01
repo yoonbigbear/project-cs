@@ -12,7 +12,6 @@ internal class ServerMain
 		int port = 8081;
 
 		DBTest.CreateTableandSP();
-		DBTest.CallSP("뮤뮤");
 
 		Server server = new(new IPEndPoint(IPAddress.Parse(address), port));
 		server.Start();
@@ -23,7 +22,7 @@ internal class ServerMain
 			var buffers = server.PacketHandler.Pop();
 			foreach (var e in buffers)
 			{
-				server.PacketHandler.Deserialize(e);
+				server.PacketHandler.Deserialize(e.Item1, e.Item2);
 			}
 		}
 

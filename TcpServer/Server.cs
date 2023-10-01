@@ -1,9 +1,11 @@
-﻿using NetCore;
+﻿using Google.Protobuf;
+using NetCore;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
@@ -93,6 +95,7 @@ public class Server : TcpServer
 	protected override void OnStart()
 	{
 		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
+		PacketHandler.Handler.Add((ushort)PacketId.CREATEACCOUNTREQ, CreateAccount_REQ);
 	}
 	// listen 호출 후
 	protected override void OnStarted() { }
@@ -111,8 +114,6 @@ public class Server : TcpServer
 	// 세션 연결
 	protected override void OnConnect(SocketAsyncEventArgs arg)
 	{
-		Console.WriteLine("new session connected");
-
 		var session = CreateSession();
 
 		//들어온 소켓을 세션의 소켓으로 넘긴다.
@@ -126,9 +127,40 @@ public class Server : TcpServer
 	protected override void OnDisconnect() { }
 	protected override void OnDisconnected() { }
 
-	public static void ChatCallback(ReadOnlySequence<byte> sequence)
+	public static void ChatCallback(TcpSession session, ReadOnlySequence<byte> sequence)
 	{
+		Session ss = session as Session;
+		Debug.Assert(ss != null);
+
 		var msg = Chat.Parser.ParseFrom(sequence);
 		//Console.WriteLine($"{msg}");
+	}
+
+	public static async void CreateAccount_REQ(TcpSession session,ReadOnlySequence<byte> sequence)
+	{
+		Session ss = session as Session;
+		Debug.Assert(ss != null);
+		var msg = CreateAccountREQ.Parser.ParseFrom(sequence);
+		var accountId = DBTest.CreateAccount(msg.Name);
+
+		if (accountId.IsCompletedSuccessfully)
+		{
+			CreateAccountACK ack = new CreateAccountACK
+			{
+				Result = 0,
+				AcctId = accountId.Result,
+			};
+			ss.Serialize((ushort)PacketId.CREATEACCOUNTACK, ack.ToByteArray());
+		}
+		else
+		{
+			CreateAccountACK ack = new CreateAccountACK
+			{
+				Result = -1,
+				AcctId = accountId.Result,
+			};
+			
+			ss.Serialize((ushort)PacketId.CREATEACCOUNTACK, ack.ToByteArray());
+		}
 	}
 }
