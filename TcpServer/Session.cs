@@ -15,7 +15,7 @@ public class Session : TcpSession
 	protected override void OnDisconnect() { }
 	// 스트림 override
 	protected override void OnDisconnected() { Console.WriteLine($"Disconnected... "); }
-	protected override void OnPacketRead(ReadOnlySequence<byte> reads)
+	protected override void OnPacketRead(ArraySegment<byte> reads)
 	{
 		((Server)Server).PacketHandler.Push(this, reads);
 	}

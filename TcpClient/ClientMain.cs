@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Net;
 using NetCore;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 public partial class Chat
 {
@@ -19,11 +20,12 @@ public class ClientMain
 		//패킷 핸들러 등록
 		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 		PacketHandler.Handler.Add((ushort)PacketId.CREATEACCOUNTACK, CreateAccount_ACK);
+		PacketHandler.Handler.Add((ushort)PacketId.CREATECHARACTERACK, CreateCharacter_ACK);
 
-		Thread.Sleep(2000);
+
 		Console.WriteLine("Start Client...");
 
-		for (int i = 0; i < 10000; ++i)
+		for (int i = 0; i < 2000; ++i)
 		{
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerConnection server = new ServerConnection(ep);
@@ -46,16 +48,32 @@ public class ClientMain
 			e.Dispose();
 	}
 
-	public static void ChatCallback(TcpSession session, ReadOnlySequence<byte> sequence)
+	public static void ChatCallback(TcpSession session, ArraySegment<byte> sequence)
 	{
 		var msg = Chat.Parser.ParseFrom(sequence);
 		//Console.WriteLine($"{msg}");
 	}
 
-	public static void CreateAccount_ACK(TcpSession session, ReadOnlySequence<byte> sequence)
+	public static void CreateAccount_ACK(TcpSession session, ArraySegment<byte> sequence)
 	{
 		var msg = CreateAccountACK.Parser.ParseFrom(sequence);
-		Console.WriteLine($"ID={msg.AcctId}");
+		Debug.Assert(msg.Result == 0);
+
+		ServerConnection ss = session as ServerConnection;
+
+		CreateCharacterREQ req = new CreateCharacterREQ
+		{
+			Name = $"ch_{session.GetHashCode()}",
+		};
+		ss.Serialize((ushort)PacketId.CREATECHARACTERREQ, req.ToByteArray());
+	}
+
+	public static void CreateCharacter_ACK(TcpSession session, ArraySegment<byte> sequence)
+	{
+		var msg = CreateCharacterACK.Parser.ParseFrom(sequence);
+		Debug.Assert(msg.Result == 0);
+
+		Console.WriteLine($"ID={msg.CharacterUid}");
 	}
 }
 
