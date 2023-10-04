@@ -8,7 +8,9 @@ public enum PacketId : ushort
 {
 	CHAT = 21000,
 	CREATEACCOUNTREQ = 3000,
-	CREATEACCOUNTACK= 3001,
+	CREATEACCOUNTACK= 3002,
+	CREATECHARACTERREQ = 4000,
+	CREATECHARACTERACK = 4002,
 }
 
 namespace NetCore
@@ -17,12 +19,12 @@ namespace NetCore
 	{
 		object _lock = new();
 
-		List<(TcpSession, ReadOnlySequence<byte>)> _backBuffer { get; set; } = new();
-		List<(TcpSession, ReadOnlySequence<byte>)> _frontBuffer { get; set; } = new();
+		List<(TcpSession, ArraySegment<byte>)> _backBuffer { get; set; } = new();
+		List<(TcpSession, ArraySegment<byte>)> _frontBuffer { get; set; } = new();
 
-		public static Dictionary<ushort, Action<TcpSession, ReadOnlySequence<byte>>> Handler { get; set; } = new();
+		public static Dictionary<ushort, Action<TcpSession, ArraySegment<byte>>> Handler { get; set; } = new();
 
-		public void Push(TcpSession session, ReadOnlySequence<byte> packet)
+		public void Push(TcpSession session, ArraySegment<byte> packet)
 		{
             lock (_lock)
             {
@@ -30,21 +32,21 @@ namespace NetCore
             }
 		}
 
-		public List<(TcpSession, ReadOnlySequence<byte>)> Pop()
+		public List<(TcpSession, ArraySegment<byte>)> Pop()
 		{
 			lock (_lock)
 			{
 				_frontBuffer.Clear();
-				_frontBuffer.AddRange(_backBuffer);
+				_frontBuffer = _backBuffer.ToList();
 				_backBuffer.Clear();
+				return _frontBuffer;
 			}
-			return _frontBuffer;
 		}
 
-		public void Deserialize(TcpSession session, ReadOnlySequence<byte> packet)
+		public void Deserialize(TcpSession session, ArraySegment<byte> packet)
 		{
-			var id = BitConverter.ToUInt16(packet.FirstSpan.Slice(0, 2/*id*/));
-			var size = BitConverter.ToUInt16(packet.FirstSpan.Slice(2, 2/*size*/));
+			var id = BitConverter.ToUInt16(packet.Slice(0, 2/*id*/));
+			var size = BitConverter.ToUInt16(packet.Slice(2, 2/*size*/));
 			var body = packet.Slice(4, size);
 
 			//원래는 여기서 실행 안함
@@ -56,7 +58,6 @@ namespace NetCore
 			{
 				Console.WriteLine(e.ToString());
 			}
-
 		}
 	}
 }

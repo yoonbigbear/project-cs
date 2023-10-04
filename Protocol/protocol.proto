@@ -12,3 +12,12 @@ message CreateAccountACK {
 	int32 result = 1;
 	int32 acct_id = 2;
 }
+
+message CreateCharacterREQ {
+	string name = 1;
+}
+
+message CreateCharacterACK {
+	int32 result = 1;
+	int64 character_uid = 2;
+}

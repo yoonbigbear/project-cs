@@ -11,7 +11,8 @@ internal class ServerMain
 		string address = "127.0.0.1";
 		int port = 8081;
 
-		DBTest.CreateTableandSP();
+		DBTest.CreateAccountTableAndProcedure();
+		DBTest.CreateCharacterTableAndProcedure();
 
 		Server server = new(new IPEndPoint(IPAddress.Parse(address), port));
 		server.Start();
@@ -24,6 +25,7 @@ internal class ServerMain
 			{
 				server.PacketHandler.Deserialize(e.Item1, e.Item2);
 			}
+			buffers.Clear();
 		}
 
 		server.Stop();

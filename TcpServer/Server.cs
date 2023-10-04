@@ -96,6 +96,7 @@ public class Server : TcpServer
 	{
 		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 		PacketHandler.Handler.Add((ushort)PacketId.CREATEACCOUNTREQ, CreateAccount_REQ);
+		PacketHandler.Handler.Add((ushort)PacketId.CREATECHARACTERREQ, CreateCharacter_REQ);
 	}
 	// listen 호출 후
 	protected override void OnStarted() { }
@@ -127,7 +128,7 @@ public class Server : TcpServer
 	protected override void OnDisconnect() { }
 	protected override void OnDisconnected() { }
 
-	public static void ChatCallback(TcpSession session, ReadOnlySequence<byte> sequence)
+	public static void ChatCallback(TcpSession session, ArraySegment<byte> sequence)
 	{
 		Session ss = session as Session;
 		Debug.Assert(ss != null);
@@ -136,31 +137,32 @@ public class Server : TcpServer
 		//Console.WriteLine($"{msg}");
 	}
 
-	public static async void CreateAccount_REQ(TcpSession session,ReadOnlySequence<byte> sequence)
+	public static async void CreateAccount_REQ(TcpSession session, ArraySegment<byte> sequence)
 	{
 		Session ss = session as Session;
 		Debug.Assert(ss != null);
 		var msg = CreateAccountREQ.Parser.ParseFrom(sequence);
-		var accountId = DBTest.CreateAccount(msg.Name);
-
-		if (accountId.IsCompletedSuccessfully)
+		var accountId = await DBTest.CreateAccount(msg.Name);
 		{
-			CreateAccountACK ack = new CreateAccountACK
-			{
-				Result = 0,
-				AcctId = accountId.Result,
-			};
+			CreateAccountACK ack = new();
+			ack.Result = 0;
+			ack.AcctId = accountId;
 			ss.Serialize((ushort)PacketId.CREATEACCOUNTACK, ack.ToByteArray());
 		}
-		else
+
+	}
+
+	public static async void CreateCharacter_REQ(TcpSession session, ArraySegment<byte> sequence)
+	{
+		Session ss = session as Session;
+		Debug.Assert(ss != null);
+		var msg = CreateCharacterREQ.Parser.ParseFrom(sequence);
+		var character_uid = await DBTest.CreateCharacter(msg.Name);
 		{
-			CreateAccountACK ack = new CreateAccountACK
-			{
-				Result = -1,
-				AcctId = accountId.Result,
-			};
-			
-			ss.Serialize((ushort)PacketId.CREATEACCOUNTACK, ack.ToByteArray());
+			CreateCharacterACK ack = new();
+			ack.Result = 0;
+			ack.CharacterUid = character_uid;
+			ss.Serialize((ushort)PacketId.CREATECHARACTERACK, ack.ToByteArray());
 		}
 	}
 }

@@ -107,7 +107,7 @@ public class ServerConnection : TcpSession
 		Send(buf);
 	}
 
-	protected override void OnPacketRead(ReadOnlySequence<byte> buf) 
+	protected override void OnPacketRead(ArraySegment<byte> buf) 
 	{
 		PacketHandler.Push(this, buf);
 	}

@@ -161,7 +161,7 @@ namespace NetCore
 				{
 					ReadResult result = await _reader.ReadAsync();
 					var buffer = result.Buffer;
-
+					
 					//Socket 종료 이벤트 감지
 					if (result.IsCompleted)
 						break;
@@ -173,9 +173,9 @@ namespace NetCore
 					if (remainData == 0)
 						break;
 
-					OnPacketRead(buffer);
+					OnPacketRead(buffer.ToArray());
 
-					_reader.AdvanceTo(buffer.Start, buffer.End);
+					_reader.AdvanceTo(buffer.End);
 				}
 			}
 			catch
@@ -200,6 +200,6 @@ namespace NetCore
 		protected virtual void OnConnected() { }
 		protected virtual void OnDisconnect() { }
 		protected virtual void OnDisconnected() { }
-		protected virtual void OnPacketRead(ReadOnlySequence<byte> buf) { }
+		protected virtual void OnPacketRead(ArraySegment<byte> buf) { }
 	}
 }
