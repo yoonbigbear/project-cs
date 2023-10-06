@@ -11,6 +11,8 @@ public partial class Chat
 
 public class ClientMain
 {
+	public static int globalcount = 0;
+
 	static void Main(string[] args)
 	{
 		string address = "127.0.0.1";
@@ -25,8 +27,9 @@ public class ClientMain
 
 		Console.WriteLine("Start Client...");
 
-		for (int i = 0; i < 2000; ++i)
+		for (int i = 0; i < 10000; ++i)
 		{
+			Thread.Sleep(1);
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
 			ServerConnection server = new ServerConnection(ep);
 			server.ConnectAsync();
