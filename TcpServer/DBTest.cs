@@ -65,7 +65,7 @@ END";
 			}
 			else
 			{
-				return -1;
+				return result;
 			}
 		}
 	}
@@ -133,7 +133,7 @@ END";
 			}
 			else
 			{
-				return 0;
+				return result;
 			}
 		}
 	}

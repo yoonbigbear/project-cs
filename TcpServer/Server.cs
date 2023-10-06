@@ -121,6 +121,7 @@ public class Server : TcpServer
 		session.Connect(arg.AcceptSocket);
 
 		RegisterSession(session);
+		Console.WriteLine($"session {_tcpSessions.items.Count}");
 	}
 
 	// 세션 연결 완료.
@@ -143,6 +144,7 @@ public class Server : TcpServer
 		Debug.Assert(ss != null);
 		var msg = CreateAccountREQ.Parser.ParseFrom(sequence);
 		var accountId = await DBTest.CreateAccount(msg.Name);
+		Debug.Assert(accountId != -1);
 		{
 			CreateAccountACK ack = new();
 			ack.Result = 0;
@@ -158,6 +160,7 @@ public class Server : TcpServer
 		Debug.Assert(ss != null);
 		var msg = CreateCharacterREQ.Parser.ParseFrom(sequence);
 		var character_uid = await DBTest.CreateCharacter(msg.Name);
+		Debug.Assert(character_uid != -1);
 		{
 			CreateCharacterACK ack = new();
 			ack.Result = 0;

@@ -40,7 +40,6 @@ public class ServerConnection : TcpSession
 		{
 			//서버에 연결.
 			await _socket.ConnectAsync(EndPoint);
-
 			if (_socket.Connected)
 			{
 				//Console.WriteLine("Connect with server...");
@@ -67,6 +66,8 @@ public class ServerConnection : TcpSession
 					Name = $"클라이언트 {GetHashCode()}",
 				};
 				Serialize((ushort)PacketId.CREATEACCOUNTREQ, req.ToByteArray());
+				Console.WriteLine(Interlocked.Increment(ref ClientMain.globalcount));
+
 
 				if (IsSocketDisposed)
 					return;
@@ -117,6 +118,11 @@ public class ServerConnection : TcpSession
 		Console.WriteLine($"Disconnected... ");
 	}
 
+	protected override void OnError(SocketError er)
+	{
+		base.OnError(er);
+		Console.WriteLine($"error {er.GetTypeCode()}");
+	}
 
 	#region Dispose
 	protected override void Dispose(bool disposing)
