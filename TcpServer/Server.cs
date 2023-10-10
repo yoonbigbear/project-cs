@@ -97,6 +97,7 @@ public class Server : TcpServer
 		PacketHandler.Handler.Add((ushort)PacketId.CHAT, ChatCallback);
 		PacketHandler.Handler.Add((ushort)PacketId.CREATEACCOUNTREQ, CreateAccount_REQ);
 		PacketHandler.Handler.Add((ushort)PacketId.CREATECHARACTERREQ, CreateCharacter_REQ);
+		PacketHandler.Handler.Add((ushort)PacketId.INSERTITEMBULKREQ, InsertItemBuild_REQ);
 	}
 	// listen 호출 후
 	protected override void OnStarted() { }
@@ -167,5 +168,29 @@ public class Server : TcpServer
 			ack.CharacterUid = character_uid;
 			ss.Serialize((ushort)PacketId.CREATECHARACTERACK, ack.ToByteArray());
 		}
+	}
+
+	public static async void InsertItemBuild_REQ(TcpSession session, ArraySegment<byte> sequence)
+	{
+		Session ss = session as Session;
+		Debug.Assert(ss != null);
+		var msg = InsertItemBulkREQ.Parser.ParseFrom(sequence);
+
+		List<ItemDB> items = new();
+		foreach(var e in msg.Items)
+		{
+			var charid = e.CharId;
+			var tid = e.Tid;
+			var count = e.Count;
+
+			items.Add(new ItemDB
+			{
+				dbid = IdGen.GenerateGUID(IdGen.IdType.Item, 1),
+				charid = charid,
+				tid = tid,
+				count = count
+			});
+		}
+		var result = DBTest.AddBulkItem(items);
 	}
 }

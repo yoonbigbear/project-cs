@@ -161,7 +161,7 @@ namespace NetCore
 				{
 					ReadResult result = await _reader.ReadAsync();
 					var buffer = result.Buffer;
-					
+
 					//Socket 종료 이벤트 감지
 					if (result.IsCompleted)
 						break;

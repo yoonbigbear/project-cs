@@ -76,7 +76,22 @@ public class ClientMain
 		var msg = CreateCharacterACK.Parser.ParseFrom(sequence);
 		Debug.Assert(msg.Result == 0);
 
-		Console.WriteLine($"ID={msg.CharacterUid}");
+		InsertItemBulkREQ req = new InsertItemBulkREQ();
+		req.Items.Add(new Item
+		{
+			CharId = msg.CharacterUid,
+			Count = 2,
+			Tid = 1002421
+		});
+		req.Items.Add(new Item
+		{
+			CharId = msg.CharacterUid,
+			Count = 5,
+			Tid = 63532221
+		});
+
+		ServerConnection ss = session as ServerConnection;
+		ss.Serialize((ushort)PacketId.INSERTITEMBULKREQ, req.ToByteArray());
 	}
 }
 
