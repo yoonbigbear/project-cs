@@ -1,5 +1,9 @@
-﻿using MySqlConnector;
+﻿using Google.Protobuf.WellKnownTypes;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using MySqlConnector;
 using NetCore;
+using System.Data;
+using System.Xml.Linq;
 
 public class DBTest
 {
@@ -136,6 +140,94 @@ END";
 				return result;
 			}
 		}
+	}
+
+	public static async void CreateBagTableAndProcedure()
+	{
+		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
+			Username=root; Password=admin;
+			Database=game");
+		var cmd = new MySqlCommand();
+		cmd.Connection = connection;
+
+		//테이블 생성 프로시져
+		{
+			await connection.OpenAsync();
+
+			cmd.CommandText = @"
+							DROP TABLE IF EXISTS bags;
+							CREATE TABLE bags (
+							id BIGINT NOT NULL PRIMARY KEY,
+							tid INT UNSIGNED NOT NULL,
+							charid BIGINT NOT NULL,
+							count INT NOT NULL,
+							last_update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+							CREATE index idx_bags_char on bags(charid);
+							CREATE index idx_bags_char_tid on bags(charid, tid);
+							CREATE index idx_bags_tid on bags(tid);";
+			await cmd.ExecuteNonQueryAsync();
+
+			cmd.CommandText = @"
+							DROP PROCEDURE IF EXISTS insert_bags_items;
+							CREATE PROCEDURE insert_bags_items(
+							IN in_id BIGINT,
+							IN in_tid INT,
+							IN in_charid BIGINT,
+							IN in_count INT
+							)								
+							BEGIN
+								INSERT INTO characters(bags.id, bags.tid, bags.charid, bags.count, bags.last_update_date) 
+									VALUE(in_id, in_tid, in_charid, in_count, CURRENT_TIMESTAMP);
+							END";
+			await cmd.ExecuteNonQueryAsync();
+		}
+	}
+
+	/// <summary>
+	/// bulk로도 추가해야함.
+	/// </summary>
+	/// <returns></returns>
+	public static async Task<long> AddBulkItem(List<ItemDB> items)
+	{
+		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
+			Username=root; Password=admin;
+			Database=game;
+			AllowLoadLocalInfile=true;");
+		var table = new DataTable();
+		table.Columns.AddRange(new[]
+		{ new DataColumn("id", typeof(long)),
+		  new DataColumn("tid", typeof(uint)),
+		  new DataColumn("charid", typeof(long)),
+		  new DataColumn("count", typeof(uint)),
+		  new DataColumn("datetime", typeof(DateTime))
+		});
+
+		try
+		{
+			await connection.OpenAsync();
+
+			//bulk insert
+
+			foreach (var e in items)
+			{
+				var row = table.NewRow();
+				row.SetField(0, e.dbid);
+				row.SetField(1, e.tid);
+				row.SetField(2, e.charid);
+				row.SetField(3, e.count);
+				table.Rows.Add(row);
+			}
+
+			
+			var bulkCopy = new MySqlBulkCopy(connection);
+			bulkCopy.DestinationTableName = "bags";
+			var result = await bulkCopy.WriteToServerAsync(table);
+		}
+		catch(Exception ex)
+		{
+			Console.WriteLine(ex.ToString());
+		}
+		return 0;
 	}
 
 }

@@ -4,6 +4,12 @@ message Chat {
   string message = 1;
 }
 
+message Item {
+	int64 char_id = 1;
+	int32 tid = 2;
+	int32 count = 3;
+}
+
 message CreateAccountREQ {
 	string name = 1;
 }
@@ -20,4 +26,8 @@ message CreateCharacterREQ {
 message CreateCharacterACK {
 	int32 result = 1;
 	int64 character_uid = 2;
+}
+
+message InsertItemBulkREQ {
+	repeated Item  items = 1;
 }

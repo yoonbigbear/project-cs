@@ -13,6 +13,7 @@ internal class ServerMain
 
 		DBTest.CreateAccountTableAndProcedure();
 		DBTest.CreateCharacterTableAndProcedure();
+		DBTest.CreateBagTableAndProcedure();
 
 		Server server = new(new IPEndPoint(IPAddress.Parse(address), port));
 		server.Start();

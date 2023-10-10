@@ -31,6 +31,7 @@ public static class MariaDBManager
 	 * 
 	 * 동기식 메서드는 스레드풀에 악영향을 미칠 수있다. 따라서 가능한 비동기 메서드를 사용한다.
 	 * 
+	 * MySql 종류에는 Set NoCount On이 없다.
 	 * 
 	 */
 	public static void Start()
