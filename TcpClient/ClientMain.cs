@@ -24,10 +24,10 @@ public class ClientMain
 		PacketHandler.Handler.Add((ushort)PacketId.CREATEACCOUNTACK, CreateAccount_ACK);
 		PacketHandler.Handler.Add((ushort)PacketId.CREATECHARACTERACK, CreateCharacter_ACK);
 
-
+		Thread.Sleep(1000);
 		Console.WriteLine("Start Client...");
 
-		for (int i = 0; i < 10000; ++i)
+		for (int i = 0; i < 20; ++i)
 		{
 			Thread.Sleep(1);
 			var ep = new IPEndPoint(IPAddress.Parse(address), port);
@@ -92,6 +92,14 @@ public class ClientMain
 
 		ServerConnection ss = session as ServerConnection;
 		ss.Serialize((ushort)PacketId.INSERTITEMBULKREQ, req.ToByteArray());
+	}
+
+	public static void InsertItemBuild_ACK(TcpSession session, ArraySegment<byte>sequence)
+	{
+		var msg = InsertItemBulkACK.Parser.ParseFrom(sequence);
+		Debug.Assert(msg.Result == 0);
+
+		
 	}
 }
 

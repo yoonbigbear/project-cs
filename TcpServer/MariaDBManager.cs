@@ -33,6 +33,8 @@ public static class MariaDBManager
 	 * 
 	 * MySql 종류에는 Set NoCount On이 없다.
 	 * 
+	 * MySql 종류에는 array type parameter를 넣을 수 없다. temp table을 생성해서 동작시켜야 한다.
+	 * 
 	 */
 	public static void Start()
 	{
