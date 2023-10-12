@@ -31,3 +31,11 @@ message CreateCharacterACK {
 message InsertItemBulkREQ {
 	repeated Item  items = 1;
 }
+
+message InsertItemBulkACK {
+	int32 result = 1;
+}
+
+message ExchangeItemsREQ {
+	
+}

@@ -191,6 +191,6 @@ public class Server : TcpServer
 				count = count
 			});
 		}
-		var result = DBTest.AddBulkItem(items);
+		var result = DBTest.InsertOrUpdateBulkItem(items);
 	}
 }

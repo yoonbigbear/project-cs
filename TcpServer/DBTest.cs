@@ -29,8 +29,8 @@ public class DBTest
 			await cmd.ExecuteNonQueryAsync();
 
 			cmd.CommandText = @"
-DROP PROCEDURE IF EXISTS create_table_account;
-CREATE PROCEDURE create_table_account(
+DROP PROCEDURE IF EXISTS insert_table_account;
+CREATE PROCEDURE insert_table_account(
 IN in_name VARCHAR(20), OUT out_id INT
 )								
 BEGIN
@@ -53,7 +53,7 @@ END";
 
 		{
 			await connection.OpenAsync();
-			cmd.CommandText = "create_table_account";
+			cmd.CommandText = "insert_table_account";
 			cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
 			cmd.Parameters.AddWithValue("in_name", name);
@@ -96,8 +96,8 @@ END";
 			await cmd.ExecuteNonQueryAsync();
 
 			cmd.CommandText = @"
-DROP PROCEDURE IF EXISTS create_table_characters;
-CREATE PROCEDURE create_table_characters(
+DROP PROCEDURE IF EXISTS insert_table_characters;
+CREATE PROCEDURE insert_table_characters(
 IN in_id BIGINT,
 IN in_name VARCHAR(20)
 )								
@@ -120,7 +120,7 @@ END";
 
 		{
 			await connection.OpenAsync();
-			cmd.CommandText = "create_table_characters";
+			cmd.CommandText = "insert_table_characters";
 			cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
 			var guid = IdGen.GenerateGUID(IdGen.IdType.Player, 1);
@@ -160,8 +160,7 @@ END";
 							id BIGINT NOT NULL PRIMARY KEY,
 							tid INT UNSIGNED NOT NULL,
 							charid BIGINT NOT NULL,
-							count INT NOT NULL,
-							last_update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+							count INT NOT NULL);
 							CREATE index idx_bags_char on bags(charid);
 							CREATE index idx_bags_char_tid on bags(charid, tid);
 							CREATE index idx_bags_tid on bags(tid);";
@@ -176,18 +175,14 @@ END";
 							IN in_count INT
 							)								
 							BEGIN
-								INSERT INTO characters(bags.id, bags.tid, bags.charid, bags.count, bags.last_update_date) 
-									VALUE(in_id, in_tid, in_charid, in_count, CURRENT_TIMESTAMP);
+								INSERT INTO characters(bags.id, bags.tid, bags.charid, bags.count) 
+									VALUE(in_id, in_tid, in_charid, in_count);
 							END";
 			await cmd.ExecuteNonQueryAsync();
 		}
 	}
 
-	/// <summary>
-	/// bulk로도 추가해야함.
-	/// </summary>
-	/// <returns></returns>
-	public static async Task<long> AddBulkItem(List<ItemDB> items)
+	public static async Task<long> InsertOrUpdateBulkItem(List<ItemDB> items)
 	{
 		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
 			Username=root; Password=admin;
@@ -198,8 +193,7 @@ END";
 		{ new DataColumn("id", typeof(long)),
 		  new DataColumn("tid", typeof(uint)),
 		  new DataColumn("charid", typeof(long)),
-		  new DataColumn("count", typeof(uint)),
-		  new DataColumn("datetime", typeof(DateTime))
+		  new DataColumn("count", typeof(uint))
 		});
 
 		try
@@ -218,10 +212,10 @@ END";
 				table.Rows.Add(row);
 			}
 
-			
 			var bulkCopy = new MySqlBulkCopy(connection);
 			bulkCopy.DestinationTableName = "bags";
 			var result = await bulkCopy.WriteToServerAsync(table);
+
 		}
 		catch(Exception ex)
 		{
@@ -230,4 +224,68 @@ END";
 		return 0;
 	}
 
+	public static async void CreateGuildTableAndProcedure()
+	{
+		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
+			Username=root; Password=admin;
+			Database=game");
+		var cmd = new MySqlCommand();
+		cmd.Connection = connection;
+
+		//테이블 생성 프로시져
+		{
+			await connection.OpenAsync();
+
+			cmd.CommandText = @"
+							DROP TABLE IF EXISTS guild;
+							CREATE TABLE guild (
+							uid INT NOT NULL PRIMARY KEY,
+							name VARCHAR(20) NOT NULL UNIQUE KEY,
+							charid BIGINT NOT NULL,
+							count INT NOT NULL,
+							register_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+							CREATE index idx_guild_char on guild(charid);
+							CREATE index idx_guild_name on guild(name);";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드 추가.
+			cmd.CommandText = @"							
+DROP PROCEDURE IF EXISTS insert_guild_table;
+CREATE PROCEDURE insert_guild_table(
+IN in_uid INT,
+IN in_name VARCHAR(20),
+IN in_charid BIGINT,
+IN in_count INT
+)								
+BEGIN
+INSERT INTO guild(`uid`, `name`, `charid`, `count`) VALUE(in_uid, in_name, in_charid, in_count);
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드 업데이트
+			cmd.CommandText = @"							
+DROP PROCEDURE IF EXISTS update_guild_table;
+CREATE PROCEDURE update_guild_table(
+IN in_uid INT,
+IN in_name VARCHAR(20),
+IN in_charid BIGINT,
+IN in_count INT
+)								
+BEGIN
+UPDATE guild SET `name` = in_name, `charid` = in_charid, `count`= in_count where `uid` = in_uid;
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드 제거
+			cmd.CommandText = @"							
+DROP PROCEDURE IF EXISTS delete_guild_table;
+CREATE PROCEDURE delete_guild_table(
+IN in_uid INT
+)								
+BEGIN
+DELETE FROM guild where `uid` = in_uid;
+END";
+			await cmd.ExecuteNonQueryAsync();
+		}
+	}
 }
