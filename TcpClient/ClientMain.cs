@@ -98,7 +98,6 @@ public class ClientMain
 	{
 		var msg = InsertItemBulkACK.Parser.ParseFrom(sequence);
 		Debug.Assert(msg.Result == 0);
-
 		
 	}
 }

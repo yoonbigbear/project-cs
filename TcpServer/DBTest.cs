@@ -288,4 +288,49 @@ END";
 			await cmd.ExecuteNonQueryAsync();
 		}
 	}
+
+	public static async void CreateMailDatabaseProcedure()
+	{
+		await using var connection = new MySqlConnection(@"Address=127.0.0.1; Port=3400;
+			Username=root; Password=admin;
+			Database=game");
+		var cmd = new MySqlCommand();
+		cmd.Connection = connection;
+
+		//테이블 생성 프로시져
+		{
+			await connection.OpenAsync();
+
+			cmd.CommandText = @"
+DROP TABLE IF EXISTS mail;
+CREATE TABLE mail (
+`guid` BIGINT UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Identifier',
+`type` TINYINT unsigned NOT NULL DEFAULT '0',
+`sender` bigint unsigned NOT NULL default '0' COMMENT 'Character Global Unique ID',
+`receiver` bigint unsigned NOT NULL default '0' COMMENT 'Character Global Unique ID',
+`subject` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+`body` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+`has_items` tinyint unsigned NOT NULL default '0',
+`expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`deliver_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`money` bigint unsigned NOT NULL DEFAULT '0',
+`checked` tinyint unsigned NOT NULL DEFAULT '0',
+PRIMARY KEY (`guid`),
+KEY `idx_receiver` (`receiver`)
+)";
+			await cmd.ExecuteNonQueryAsync();
+
+			cmd.CommandText = @"
+DROP TABLE IF EXISTS `mail_items`;
+CREATE TABLE `mail_items` (
+`mail_id`		bigint unsigned NOT NULL DEFAULT '0',
+`item_guid`		bigint unsigned NOT NULL DEFAULT '0',
+`receiver`		bigint unsigned NOT NULL DEFAULT '0' COMMENT 'Characet Global Unique Id',
+PRIMARY KEY			(`item_guid`),
+KEY `idx_receiver`	(`receiver`),
+KEY `idx_mail_id`	(`mail_id`)
+)";
+			await cmd.ExecuteNonQueryAsync();
+		}
+	}
 }
