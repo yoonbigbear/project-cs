@@ -217,7 +217,7 @@ END";
 			var result = await bulkCopy.WriteToServerAsync(table);
 
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			Console.WriteLine(ex.ToString());
 		}
@@ -330,6 +330,46 @@ PRIMARY KEY			(`item_guid`),
 KEY `idx_receiver`	(`receiver`),
 KEY `idx_mail_id`	(`mail_id`)
 )";
+			await cmd.ExecuteNonQueryAsync();
+
+			cmd.CommandText = @"
+-- receiver id를 받아서 현재 메일함에 있는 모든 메일을 받아옵니다.
+
+DROP PROCEDURE IF EXISTS select_all_received_mails;
+CREATE PROCEDURE select_all_received_mails(
+IN `in_receiver` BIGINT
+)								
+BEGIN
+SELECT * FROM mail where mail.receiver = in_receiver;
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			cmd.CommandText = @"
+-- mail id를 기반으로 선택한 메일 1개와 동봉된 아이템 목록을 받아옵니다.
+
+DROP PROCEDURE IF EXISTS select_read_received_mails;
+CREATE PROCEDURE select_read_received_mails(
+IN `in_mail_id` BIGINT
+)
+BEGIN
+SELECT * FROM mail, mail_items where mail.mail_id = in_mail_id and mail_items.mail_id = in_mail_id;
+UPDATE mail SET `checked` = 1 WHERE `mail_id` = `in_mail_id`;
+-- exprie_time도 변경해줘야 한다.
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			cmd.CommandText = @"
+-- 기간이 지난 메일은 지웁니다.
+
+DROP PROCEDURE IF EXISTS delete_expired_mails;
+CREATE PROCEDURE delete_expired_mails(
+IN `in_receiver` BIGINT
+)
+BEGIN
+DELETE FROM mail_items WHERE mail_items.receiver IN 
+(SELECT guid FROM mail where mail.expire_time < CURRENT_TIMESTAMP AND mail.receiver = `in_receiver`);
+DELETE FROM mail WHERE mail.expire_time < CURRENT_TIMESTAMP AND mail.receiver = `in_receiver`;
+END";
 			await cmd.ExecuteNonQueryAsync();
 		}
 	}
