@@ -236,16 +236,18 @@ END";
 		{
 			await connection.OpenAsync();
 
+			//길드 테이블 생성
 			cmd.CommandText = @"
-							DROP TABLE IF EXISTS guild;
-							CREATE TABLE guild (
-							uid INT NOT NULL PRIMARY KEY,
-							name VARCHAR(20) NOT NULL UNIQUE KEY,
-							charid BIGINT NOT NULL,
-							count INT NOT NULL,
-							register_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
-							CREATE index idx_guild_char on guild(charid);
-							CREATE index idx_guild_name on guild(name);";
+DROP TABLE IF EXISTS guild;
+CREATE TABLE guild (
+uid INT NOT NULL PRIMARY KEY,
+name VARCHAR(20) NOT NULL UNIQUE KEY,
+charid BIGINT NOT NULL,
+count INT NOT NULL,
+register_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE index idx_guild_char on guild(charid);
+CREATE index idx_guild_name on guild(name);
+";
 			await cmd.ExecuteNonQueryAsync();
 
 			//길드 추가.
@@ -284,6 +286,62 @@ IN in_uid INT
 )								
 BEGIN
 DELETE FROM guild where `uid` = in_uid;
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+
+
+			//길드멤버 테이블 생성
+			cmd.CommandText = @"
+DROP TABLE IF EXISTS guild_member;
+CREATE TABLE guild_member 
+(
+`charid` BIGINT UNSIGNED NOT NULL DEFAULT '0' COMMENT 'identifier',
+`uid` INT UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Character Global Unique ID',
+`register_date` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY(`charid`),
+KEY (`uid`)
+);
+";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드원 추가
+			cmd.CommandText = @"
+DROP PROCEDURE IF EXISTS insert_guild_member;
+CREATE PROCEDURE insert_guild_member(
+IN `in_charid` BIGINT,
+IN `in_uid` INT
+)								
+BEGIN
+
+INSERT INTO guild_member(`charid`, `uid`) VALUE (`in_charid`,`in_uid`);
+
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드원 탈퇴
+			cmd.CommandText = @"
+DROP PROCEDURE IF EXISTS delete_guild_member;
+CREATE PROCEDURE delete_guild_member(
+IN `in_charid` BIGINT
+)								
+BEGIN
+
+DELETE FROM guild_member where `charid` = `in_charid`;
+
+END";
+			await cmd.ExecuteNonQueryAsync();
+
+			//길드 해체
+			cmd.CommandText = @"
+DROP PROCEDURE IF EXISTS delete_all_guild_member;
+CREATE PROCEDURE delete_all_guild_member(
+IN `in_uid` INT
+)								
+BEGIN
+
+DELETE FROM guild_member where `uid` = `in_uid`;
+
 END";
 			await cmd.ExecuteNonQueryAsync();
 		}
