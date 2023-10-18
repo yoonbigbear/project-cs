@@ -4,7 +4,7 @@
 - [ ] snapshot interpol
 - [ ] event sync
 - [ ] lockstep
-- [ ] tcp
+- [x] tcp
 - [ ] udp
 - [ ] ~RPC를 굳이 따로 만들필요가 있을까 싶음. 게임엔진 만드는게 아니니 우선 제외~
 - [ ] auto gen
